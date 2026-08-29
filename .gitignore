@@ -1,0 +1,22 @@
+# Claude Code / agentes — puede contener tokens o config local
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node
+node_modules/
+
+# Secretos / entorno local
+.env
+.env.*
+!.env.example
+
+# SO
+.DS_Store
+Thumbs.db
+
+# Spec Kit — cache local si la genera (no se conocen artefactos de este tipo aun)
