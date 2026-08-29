@@ -4,7 +4,7 @@ Precondiciones y "no romper". Consultar on-demand antes de tocar el area asociad
 
 ---
 
-## Duplicacion de carpeta de trabajo (Windows OneDrive vs WSL2)
+## [RESUELTO 2026-08-29, ver D7] Duplicacion de carpeta de trabajo (Windows OneDrive vs WSL2)
 
 **Area que protege:** cualquier operacion de git (init, commit, push) y cualquier decision
 sobre "donde vive el codigo".
@@ -25,6 +25,12 @@ push, no se toco git. **Sigue sin resolver al 2026-08-29.**
 **No romper:** no correr `git init` + push en ninguna de las dos carpetas sin retomar esta
 decision con Joelo primero — cualquiera de las dos opciones (Windows como fuente de verdad,
 o migrar a WSL2) puede pisar el historial del remote existente si se hace a las apuradas.
+
+**Resolucion (D7, 2026-08-29):** se eligio Windows (esta carpeta) como fuente de verdad.
+`git init` + primer commit ya hechos aca. Falta el `git push --force` a
+`github.com/joelobenitez/aiproject`, que Joelo corre desde su propia terminal (la VM puente
+de este bridge no tiene credenciales de GitHub). La copia WSL2 queda obsoleta sin
+resincronizar. Detalle: `memory/decisions.md` D7.
 
 ---
 
@@ -73,9 +79,40 @@ necesitar el contenedor (`ANTHROPIC_API_KEY`, `MODEL`, `INFLUX_URL`/`TOKEN`,
 gestionar esos secretos (`.env` + gitignore, vault, secrets de Docker, etc.). Confirmar
 antes de escribir el `docker-compose.yml` real.
 
+**Actualizacion (D8, 2026-08-29):** para la etapa de desarrollo del Agent como script
+standalone (sin contenedor), se usa `.env` local + `.gitignore` como solucion temporal —
+esto NO es la decision de produccion, solo destraba el desarrollo temprano. La decision de
+manejo de secretos en produccion sigue abierta y hay que resolverla antes de escribir el
+`docker-compose.yml` real.
+
 ---
 
-## `constitution.md` de Spec Kit sigue siendo el template vacio
+## Mosquitto nativo de Windows compite por el puerto 1883 con el broker de Docker
+
+**Area que protege:** levantar `docker-compose.yml` y correr `herramientas/emulador_motor.py`
+o cualquier cliente MQTT desde el host (fuera de Docker).
+
+**Detalle:** la maquina de Joelo tiene instalado el servicio de Windows "Mosquitto Broker"
+(`C:\Program Files\mosquitto`, instalado 22/7/2025 — anterior a la decision de usar Docker
+Compose, D9), corriendo como `LocalSystem` en modo Automatic. Escucha en el puerto 1883 del
+host igual que el broker `eclipse-mosquitto` del `docker-compose.yml`. Cuando ambos estan
+activos, el proceso de Windows gana la conexion (los clientes que publican a
+`localhost:1883` desde fuera de Docker nunca llegan al broker del contenedor, sin ningun
+error visible — el publish() de paho-mqtt devuelve OK igual). Diagnosticado en Session
+2026-08-29 comparando `netstat -ano` con `docker port aiproject-broker` (dos PIDs distintos
+escuchando el mismo puerto).
+
+**No romper:** antes de correr el emulador (o cualquier script MQTT) contra `localhost:1883`
+con el stack Dockerizado levantado, verificar que el servicio de Windows este detenido
+(`net stop mosquitto`, requiere terminal como Administrador — esta sesion de Claude Code no
+tiene permisos para hacerlo sola). Esta en modo Automatic, asi que vuelve a arrancar solo si
+se reinicia Windows. Si se vuelve un problema recurrente, la alternativa sin tocar el
+servicio es remapear el puerto host del broker en `docker-compose.yml` (ej. `11883:1883`) y
+ajustar `MQTT_PORT` en `.env` para clientes que corren fuera de Docker.
+
+---
+
+## [RESUELTO 2026-08-29] `constitution.md` de Spec Kit sigue siendo el template vacio
 
 **Area que protege:** cualquier uso de los comandos `/speckit-*` que dependan de la
 constitucion (por ejemplo `/speckit-plan`, `/speckit-analyze`).
@@ -84,3 +121,9 @@ constitucion (por ejemplo `/speckit-plan`, `/speckit-analyze`).
 `/speckit-plan` antes de llenar `constitution.md` puede generar artefactos sin las
 convenciones del proyecto (idioma sin tildes, separacion Node-RED=datos / n8n=orquestacion /
 Python=inteligencia, disciplina git) incorporadas.
+
+**Resolucion (2026-08-29):** `/speckit-constitution` corrido, `.specify/memory/constitution.md`
+ratificado en v1.0.0 con 5 principios basados en D1-D8. `/speckit-specify`, `/speckit-plan`,
+`/speckit-tasks` e `/speckit-implement` ya corrieron todos sobre esta constitucion. Queda
+pendiente (no bloqueante) una enmienda futura para que el Principio I reconozca la excepcion
+de fase MVP introducida por D9 — ver `memory/progress.md`.

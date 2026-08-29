@@ -15,6 +15,9 @@ node_modules/
 .env.*
 !.env.example
 
+# Datos de runtime (SQLite del MVP, D9)
+data/
+
 # SO
 .DS_Store
 Thumbs.db

@@ -163,3 +163,156 @@ al checkpoint).
 **Alcance de esta migracion:** solo reorganizacion de conocimiento ya existente en
 `CHECKPOINT.md`, `CLAUDE.md`, `GEMINI.md` y `definicion/` hacia la nueva estructura. No se
 agrego informacion nueva ni se tomaron decisiones de producto/arquitectura en este paso.
+
+---
+
+## D7 — Resolver la duplicacion de carpetas: Windows (OneDrive) queda como fuente de verdad
+
+**Fecha:** 2026-08-29
+**Quien decidio:** Joelo
+
+**Decision:** se cierra el riesgo abierto desde Session 05 (ver D6 y `memory/risks.md`).
+Esta carpeta (`C:\Users\joelo\OneDrive\Documentos\Claude\Projects\aiproject`, Windows) pasa
+a ser la fuente de verdad del repo. Se corrio `git init -b main`, se hizo el primer commit
+(35 archivos: investigacion/, definicion/, Spec Kit, memory/, obs/) y se conecto
+`origin -> https://github.com/joelobenitez/aiproject.git`. El push (con force, porque el
+remote tiene historial viejo de la copia WSL2 desactualizada) lo hace Joelo desde su propia
+terminal, no desde esta sesion — la VM puente de este bridge no tiene credenciales de
+GitHub configuradas (sin `gh`, sin SSH, sin token).
+
+**Por que Windows y no WSL2:** esta carpeta tiene todo el contenido vigente (investigacion/,
+definicion/, Spec Kit instalado, memory/ recien armado); la copia WSL2
+(`/home/joelo/aiproject`) esta desactualizada (ultimo commit visto: "cierre sesion 02", sin
+`definicion/` ni Spec Kit). Migrar el contenido nuevo a WSL2 hubiera sido mas trabajo y mas
+riesgo de perder algo en la copia.
+
+**Efecto:** la copia WSL2 queda obsoleta una vez hecho el force-push — no se volvio a tocar
+ni a verificar su estado en esta sesion (no es alcanzable desde la VM puente). Si se sigue
+usando WSL2 para algo, hay que resincronizarla manualmente (clone limpio del remote
+actualizado) o abandonarla.
+
+**Pendiente:** Joelo tiene que correr el push (`git push -u origin main --force`, o
+`--force-with-lease` si prefiere una verificacion mas segura) desde su terminal con sus
+credenciales de GitHub ya configuradas.
+
+---
+
+## D8 — Camino de implementacion del Claude Agent: script standalone antes de contenedor
+
+**Fecha:** 2026-08-29
+**Quien decidio:** Joelo + Claude Code
+
+**Decision:** antes de construir el Claude Agent en su forma final segun D3 (contenedor
+Docker, FastAPI, red `iot-net`, docker-compose), se construye primero como script Python
+standalone, sin contenedor, alimentado con contexto JSON hardcodeado (los 4 escenarios A-D
+de `definicion/caso_de_uso_fase1.md`) en lugar de queries reales a InfluxDB/MySQL. Secretos
+en esta etapa: `.env` local + `.gitignore` (no vault ni Docker secrets todavia). Modelo por
+defecto: Haiku 4.5 con prompt caching (barato); escalar a Sonnet 5 solo si la calidad del
+diagnostico no alcanza contra los 4 escenarios.
+
+**Por que:** D3 fija la forma final del servicio (contenedor, endpoints HTTP, red interna)
+pero esa forma depende de decisiones aun no resueltas — manejo de secretos en produccion,
+docker-compose armado, InfluxDB/MySQL corriendo (ver `memory/risks.md`). Esperar a que esas
+piezas esten listas bloquea sin necesidad el desarrollo del nucleo cognitivo (prompt +
+parser), que es la pieza que realmente hay que iterar y la unica que se puede validar contra
+los escenarios de falla ya definidos sin depender del resto del stack.
+
+**Alcance:** este camino NO reemplaza D3 ni resuelve la decision pendiente de manejo de
+secretos en produccion — las pospone deliberadamente para esta etapa de desarrollo
+temprano. Una vez validado el prompt/parser contra los 4 escenarios, se envuelve en FastAPI
++ contenedor segun la forma ya definida en D3, y ahi se retoma la decision de secretos real.
+
+**Riesgo que deja abierto:** el manejo de secretos de produccion (`ANTHROPIC_API_KEY`,
+credenciales DB) sigue sin decision — ver `memory/risks.md`.
+
+---
+
+## D9 — MVP simplificado: colapsar Node-RED + n8n en un unico servicio Python
+
+**Fecha:** 2026-08-29
+**Quien decidio:** Joelo + Claude Code
+
+**Decision:** para la fase de MVP demostrativo (no para la arquitectura final de escala,
+ver D11), se colapsan los roles de Node-RED (datos) y n8n (orquestacion) en un unico
+servicio Python de vida larga: se suscribe a MQTT, escribe en InfluxDB, evalua el umbral
+con estado en memoria (histeresis), arma el contexto, llama al Claude Agent y notifica por
+Telegram. Ademas: SQLite reemplaza a MySQL para el MVP (un archivo, sin contenedor ni
+credenciales); se postergan Email y Web Report (D4) a una fase posterior; se mantiene un
+broker MQTT liviano (EMQX o Mosquitto) y Grafana porque son baratos de levantar y dan alto
+impacto visual para demostrar la interconexion en vivo.
+
+**Por que:** el stack completo definido en D1-D4 (~9 piezas: EMQX+InfluxDB+MySQL+Node-RED+
+n8n+Grafana+Claude Agent+Telegram+Email+Web Report) es realista para produccion pero pesado
+para un MVP cuyo objetivo es demostrar la interconexion del sistema y el potencial de
+programar con Claude Code — Node-RED y n8n son herramientas de bajo-codigo (flows/workflows
+armados por UI, guardados como JSON, ya senalado como riesgo de versionado en
+`memory/risks.md`), y no hay nada ahi que Claude Code pueda escribir, revisar o testear.
+Email y Web Report no suman a demostrar interconexion (Telegram ya cubre notificacion sin
+SMTP ni generacion de HTML). MySQL agrega un contenedor y credenciales para un volumen de
+datos que, en la escala de una demo de un solo motor, no lo justifica.
+
+**Alcance:** esta decision es especifica de la fase MVP. NO invalida el razonamiento de D1
+(separacion de capas) ni de D3 (Agent como servicio propio) para cuando el sistema escale a
+una estructura industrial real — ver D11, donde la separacion detector/orquestador vuelve a
+aparecer como necesidad tecnica (no de UI) al crecer en volumen y numero de equipos.
+
+---
+
+## D10 — Modelo de ejecucion del servicio Python del MVP: proceso de vida larga, no serverless
+
+**Fecha:** 2026-08-29
+**Quien decidio:** Joelo + Claude Code
+
+**Decision:** el servicio Python de D9 corre como un proceso de vida larga (un contenedor
+mas del mismo docker-compose en desarrollo; el mismo contenedor sin cambios en produccion),
+no como funciones serverless.
+
+**Por que:** el nucleo del servicio es una suscripcion MQTT persistente (tiene que estar
+siempre escuchando) mas un estado en memoria para la histeresis del umbral (evitar
+diagnosticos duplicados, ver D1). Serverless es event-per-invocation y stateless, con
+cold-starts — exactamente lo contrario de lo que necesita este componente. Meterlo en
+serverless obligaria a un puente externo que sostenga la conexion MQTT y reinyecte el
+estado en cada invocacion, sumando complejidad en vez de sacarla.
+
+---
+
+## D11 — Roadmap de escalamiento a estructura industrial real: stack, integracion de hardware y dimensionamiento
+
+**Fecha:** 2026-08-29
+**Quien decidio:** Joelo + Claude Code
+
+**Decision (roadmap, no implementacion inmediata):** cuando el sistema pase de la demo de
+un motor a una estructura industrial real, se preve:
+
+- **Escalamiento del servicio Python (D9):** separar de nuevo lo que D9 colapso por
+  simplicidad — un componente de **ingesta + deteccion** (stateful, tiene que ver el 100%
+  del stream, sostiene la histeresis por equipo en memoria) y uno o mas **workers de
+  diagnostico** (consumen de una cola, escalan horizontalmente sin tocar el detector). Los
+  topicos ya estan pensados para esto desde `CLAUDE.md` (patron UNS
+  `empresa/planta/equipo/sensor`): escalar es pasar de un topico fijo a un wildcard
+  (`empresa/+/+/+`). Los umbrales estaticos hardcodeados en el MVP pasan a vivir en una
+  tabla y cargarse dinamicamente por tipo de equipo (ya anotado en D1). El enganche de
+  modelos ML (fase posterior, ver tabla de roles en `CLAUDE.md`) entra dentro del detector,
+  sin cambiar el contrato hacia el diagnostico.
+- **Integracion con hardware real:** el emulador Python se reemplaza por el RUT956
+  (hardware ya confirmado) hablando Modbus RTU/RS485 con sensores reales (temperatura,
+  corriente via pinza, vibracion) y publicando por su cliente MQTT nativo al broker central
+  con la misma estructura de topicos — el pipeline de deteccion/diagnostico no cambia,
+  solo cambia el origen del dato. Multi-sitio: un RUT956 (o varios) por planta/linea; su 4G
+  dual SIM permite publicar directo desde sitios sin conectividad fija.
+- **Stack sugerido a esa escala:** EMQX en cluster (motivo por el que se eligio EMQX y no
+  Mosquitto para el largo plazo — escala horizontalmente), InfluxDB para series de tiempo,
+  Postgres/MySQL para lo relacional (reemplazando el SQLite de D9), el par
+  detector+workers de diagnostico detras de una cola, Grafana igual que en el MVP.
+- **Hardware sugerido:** el computo pesado (inferencia del LLM) corre en la API de Claude,
+  no en infraestructura propia — a diferencia de un proyecto de ML/edge tradicional, sumar
+  equipos no exige mas GPU/CPU, solo mas I/O y orquestacion. Alcanza un servidor modesto
+  (VM cloud chica de pocos vCPU y 8-16GB RAM, o un mini PC on-prem — mismas opciones ya
+  anotadas en D3: Hetzner/LightNode/mini PC). La decision de produccion sigue diferida
+  (ver D3), esto solo fija el criterio de dimensionamiento cuando se tome.
+
+**Por que queda como roadmap y no como decision ejecutable ya:** ninguna de estas piezas es
+necesaria para el MVP (D9-D10). Se registra ahora como referencia a futuro para no perder
+el razonamiento de la sesion, y para que D9 (simplificacion del MVP) no se lea como un
+abandono permanente de la separacion de capas de D1/D3 — es una postergacion tecnica, no un
+cambio de dirección.
