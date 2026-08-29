@@ -1,18 +1,20 @@
 # Progress — aiproject
 
 > **Ultima actualizacion:** 2026-08-29
-> **Donde estamos:** MVP del feature `001-diagnostico-motor-industrial` IMPLEMENTADO Y
-> VALIDADO EN DOCKER REAL. `/speckit-implement` corrido de punta a punta: 38/38 tareas de
-> `tasks.md` completas. Codigo en `src/` + `herramientas/emulador_motor.py` +
-> `docker-compose.yml` + provisioning de Grafana. 31 tests de pytest en verde. Stack
-> levantado con `docker compose up` (broker+influxdb+servicio+grafana) y probado end-to-end
-> con el emulador real: deteccion, persistencia SQLite/InfluxDB, degradacion controlada de
-> diagnostico/notificacion (sin credenciales reales todavia) y Grafana provisionado, todo
-> confirmado funcionando. Solo falta probar el diagnostico real de Claude y la notificacion
-> real de Telegram (requiere cargar `ANTHROPIC_API_KEY`/`TELEGRAM_BOT_TOKEN`/`CHAT_ID` en
-> `.env`) y mirar el dashboard en el navegador. Metodo de memoria multisesion instalado (D6).
-> Repo pusheado a GitHub (D7) — `fe521e6` en `main`, pero el trabajo de esta sesion
-> (implementacion completa) todavia NO esta commiteado — Joelo no pidio commit todavia.
+> **Donde estamos:** MVP del feature `001-diagnostico-motor-industrial` IMPLEMENTADO,
+> VALIDADO EN DOCKER REAL, COMMITEADO Y PUSHEADO. `/speckit-implement` corrido de punta a
+> punta: 38/38 tareas de `tasks.md` completas. Codigo en `src/` +
+> `herramientas/emulador_motor.py` + `docker-compose.yml` + provisioning de Grafana. 31
+> tests de pytest en verde. Stack levantado con `docker compose up` (broker+influxdb+
+> servicio+grafana) y probado end-to-end con el emulador real: deteccion, persistencia
+> SQLite/InfluxDB, degradacion controlada de diagnostico/notificacion (sin credenciales
+> reales todavia) y Grafana provisionado, todo confirmado funcionando. Commit `2badaab`
+> pusheado a `main` en GitHub — repo local y remoto identicos (verificado 2026-08-29,
+> `git rev-list --left-right --count origin/main...HEAD` → `0 0`). Solo falta probar el
+> diagnostico real de Claude y la notificacion real de Telegram (requiere cargar
+> `ANTHROPIC_API_KEY`/`TELEGRAM_BOT_TOKEN`/`CHAT_ID` reales en `.env`, que hoy esta vacio
+> a proposito y NO esta trackeado en git) y mirar el dashboard en el navegador. Metodo de
+> memoria multisesion instalado (D6).
 
 ---
 
@@ -23,16 +25,16 @@
 | Definicion (arquitectura + caso de uso) | CERRADO — D1, D2, D3, D4 resueltas. Ver `memory/decisions.md` |
 | Ubicacion de la carpeta de trabajo (Windows vs WSL2) | RESUELTO (D7) — Windows/OneDrive es la fuente de verdad |
 | Repo git local (esta carpeta) | CREADO — `git init -b main` + primer commit (35 archivos). Remote `origin` configurado |
-| Push a GitHub | HECHO — `fe521e6` forzado a `main` en `github.com/joelobenitez/aiproject`, confirmado por Joelo |
+| Push a GitHub | HECHO — `2badaab` en `main` en `github.com/joelobenitez/aiproject` (incluye `fe521e6` anterior), local y remoto identicos |
 | Spec Kit — constitucion | HECHO — `.specify/memory/constitution.md` v1.0.0, 5 principios basados en D1-D7 |
 | Spec Kit — spec del feature | HECHO — `specs/001-diagnostico-motor-industrial/spec.md`, checklist en verde, sin clarificaciones pendientes |
 | Spec Kit — plan/tasks | HECHO — `plan.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`, `tasks.md` (38 tareas) |
-| Spec Kit — implement | CASI COMPLETO — 37/38 tareas (T001-T036, T038). Falta T037 (E2E real, ver abajo) |
+| Spec Kit — implement | COMPLETO — 38/38 tareas de `tasks.md`, incluyendo T037 (validacion en Docker real) |
 | Stack objetivo del MVP | REDEFINIDO (D9) — broker MQTT + InfluxDB + Grafana + 1 servicio Python (colapsa Node-RED+n8n+Agent), SQLite en vez de MySQL, Email/Web Report postergados |
 | Stack objetivo a escala industrial | Roadmap anotado (D11) — vuelve a separar detector/diagnostico, RUT956 real, EMQX cluster, Postgres/MySQL, dimensionamiento de hardware |
 | Contratos de datos (MQTT payload, schema InfluxDB, schema DB, contrato interno del servicio Python) | HECHO — `specs/001-diagnostico-motor-industrial/contracts/` + `data-model.md`, implementados en `src/` |
-| Codigo del MVP (`src/`, `herramientas/emulador_motor.py`) | IMPLEMENTADO — pipeline completo ingesta→deteccion→diagnostico→notificacion→Grafana, 31 tests pytest en verde |
-| Docker Compose real (version MVP simplificada) | HECHO — `docker-compose.yml` (broker, influxdb, servicio, grafana). NO probado con `docker compose up` real en esta sesion (Docker Desktop no estaba corriendo) |
+| Codigo del MVP (`src/`, `herramientas/emulador_motor.py`) | IMPLEMENTADO Y COMMITEADO — pipeline completo ingesta→deteccion→diagnostico→notificacion→Grafana, 31 tests pytest en verde |
+| Docker Compose real (version MVP simplificada) | VALIDADO — `docker compose up -d --build` corrido con exito (broker+influxdb+servicio+grafana), pipeline probado end-to-end con el emulador real (ver "Pendientes sueltos") |
 | Memoria multi-sesion (este metodo) | INSTALADO — 2026-08-29 |
 
 ---
@@ -45,17 +47,17 @@ Ninguno bloqueante. Ver "Pendientes sueltos" abajo para lo que falta cerrar.
 
 ## Proximos pasos
 
-**Foco de la proxima sesion (default):** `/speckit-implement` corrio de punta a punta
-(2026-08-29) y dejo el MVP completo en `src/` con 31 tests pytest en verde. Lo unico que
-falta es T037: correr `quickstart.md` con infraestructura real (Docker Desktop + credenciales
-reales de Anthropic/Telegram), que no estaba disponible en esta sesion. El trabajo tampoco
-esta commiteado todavia — Joelo no pidio el commit.
+**Foco de la proxima sesion (default):** el MVP esta implementado, validado en Docker real
+y commiteado/pusheado (`2badaab`, `main`, local y remoto identicos). No hay nada bloqueante
+pendiente — lo que queda es opcional/de mejora continua.
 
 Pendiente, en orden sugerido:
-1. Levantar Docker Desktop, copiar `.env.example` a `.env` con credenciales reales, y correr
-   `docker compose up -d` + `python herramientas/emulador_motor.py --escenario A` para
-   validar `quickstart.md` de punta a punta (T037).
-2. Si sale bien, pedir el commit del MVP (no se hizo commit todavia esta sesion).
+1. Cargar credenciales reales (`ANTHROPIC_API_KEY` en la consola de developer de Anthropic,
+   NO el credito de suscripcion de Claude.ai que es una billetera distinta — ver conversacion
+   2026-08-29; `TELEGRAM_BOT_TOKEN`/`CHAT_ID`) en `.env` y reiniciar el servicio para ver el
+   diagnostico real de Claude y la notificacion real de Telegram funcionando.
+2. Mirar el dashboard de Grafana en el navegador (`http://localhost:3000`) para confirmar
+   visualmente lo que ya se valido por API (datasource sano, dashboard provisionado).
 3. Reconciliar `spec.md` con el alcance real implementado (Historia 3/email fuera de
    alcance — ver nota abajo, arrastrada desde `/speckit-plan`).
 4. Enmienda de `/speckit-constitution` para que el Principio I reconozca la excepcion de
@@ -90,8 +92,20 @@ Pendiente, en orden sugerido:
   `ANTHROPIC_API_KEY`/`TELEGRAM_BOT_TOKEN`/`CHAT_ID` validos en `.env`, que hoy estan vacios
   a proposito) y confirmar visualmente el dashboard en el navegador
   (`http://localhost:3000`).
-- **Commit pendiente:** todo el codigo de esta sesion esta sin commitear — Joelo no pidio
-  el commit todavia. No asumir luz verde para commitear sin preguntar primero.
+- **Commit y push (2026-08-29):** Joelo pidio el commit — hecho como `2badaab` en `main` y
+  pusheado a `github.com/joelobenitez/aiproject`. Verificado: working tree limpio, local y
+  remoto identicos (`git rev-list --left-right --count origin/main...HEAD` → `0 0`).
+- **Facturacion de la API de Claude (2026-08-29):** Joelo tiene $90.23 de credito
+  promocional (vence 19/9/2026) pero es de su cuenta de Claude.ai, NO de
+  `console.anthropic.com` (la consola de developer que factura el `ANTHROPIC_API_KEY` que
+  usa `src/config.py`) — son billeteras separadas, confirmado via busqueda web. Desde el
+  15/6/2026 Anthropic tiene un "Agent SDK credit" mensual atado a los planes pagos de
+  Claude.ai/Code para uso programatico via sus propias herramientas (Agent SDK, `claude -p`,
+  GitHub Actions), pero se consume autenticando como suscriptor, no via una API key suelta
+  como la que usa este proyecto. Conclusion: para probar el diagnostico real hay que revisar
+  el saldo en `console.anthropic.com` y cargar el minimo (~$5) si esta en cero — a esta
+  escala de uso (estimado centavos de dolar por diagnostico con Haiku 4.5 + prompt caching)
+  alcanza para meses.
 - `/speckit-plan` (corrido 2026-08-29) dejo dos items deliberadamente diferidos (confirmado
   por Joelo, no bloqueantes): (1) `spec.md` sigue exigiendo Email/Historia 3 pero la
   implementacion los deja fuera de alcance — falta actualizar `spec.md` para que no diverja
