@@ -57,7 +57,7 @@
         "enable": true,
         "iconColor": "red",
         "datasource": { "type": "influxdb", "uid": "aiproject-influxdb" },
-        "query": "from(bucket: \"lecturas_motor\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"alertas\") |> filter(fn: (r) => r.equipo_id == \"motor_001\") |> filter(fn: (r) => r._field == \"valor\")",
+        "query": "from(bucket: \"lecturas_motor\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"alertas\") |> filter(fn: (r) => r.equipo_id == \"motor_001\") |> filter(fn: (r) => r._field == \"valor\") |> group()",
         "textColumn": "variable",
         "tagsColumn": "severidad"
       }

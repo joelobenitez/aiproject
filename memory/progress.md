@@ -55,8 +55,8 @@ Pendiente, en orden sugerido:
 2. ~~Cargar `TELEGRAM_BOT_TOKEN`/`CHAT_ID` reales y confirmar notificacion real~~ — HECHO,
    Alerta #16 confirmada por logs (Claude 200 OK + Telegram 200 OK). Falta que Joelo
    confirme visualmente que el mensaje llego a su Telegram.
-3. Mirar el dashboard de Grafana en el navegador (`http://localhost:3000`) para confirmar
-   visualmente lo que ya se valido por API (datasource sano, dashboard provisionado).
+3. ~~Mirar el dashboard de Grafana~~ — HECHO, bug real encontrado y arreglado (ver
+   "Pendientes sueltos": las anotaciones de alerta no se veian).
 4. Reconciliar `spec.md` con el alcance real implementado (Historia 3/email fuera de
    alcance — ver nota abajo, arrastrada desde `/speckit-plan`).
 5. Enmienda de `/speckit-constitution` para que el Principio I reconozca la excepcion de
@@ -92,6 +92,23 @@ Pendiente, en orden sugerido:
     mosquitto nativo de Windows (servicio) no este compitiendo por el puerto 1883 antes de
     `docker compose up` — ver `memory/risks.md`. Se repitio este bloqueo en esta sesion,
     se resolvio igual que la vez anterior (`net stop mosquitto`, admin).
+- **Bug de anotaciones en Grafana encontrado y arreglado (2026-08-30):** al revisar
+  visualmente el dashboard `motor-001-mvp`, los graficos de temperatura/corriente/vibracion
+  se veian bien pero las anotaciones de alerta (lineas rojas) no aparecian, a pesar de que
+  el datasource estaba sano y el measurement `alertas` en InfluxDB tenia los eventos
+  esperados (verificado con una query directa a la API de InfluxDB: 15 alertas en las
+  ultimas 6h). Causa: el query Flux de la anotacion
+  (`grafana/provisioning/dashboards/motor.json`) devolvia `variable` y `severidad` como
+  **labels** de un unico campo `_value` (formato "wide", tipico para paneles de series de
+  tiempo) en vez de como columnas de tabla — y `textColumn`/`tagsColumn` de la anotacion
+  necesitan columnas reales con esos nombres para funcionar. Confirmado reproduciendo el
+  query exacto contra `/api/ds/query` de Grafana y comparando la forma del resultado antes
+  y despues del fix. **Fix:** agregar `|> group()` al final del query Flux de la anotacion
+  — fuerza el formato "long" (tags como columnas reales en vez de labels). Aplicado en
+  `grafana/provisioning/dashboards/motor.json`, recargado solo via el poll de provisioning
+  (`updateIntervalSeconds: 30`), confirmado por API que la anotacion ya devuelve las
+  columnas `variable`/`severidad` esperadas. Pendiente que Joelo confirme visualmente en el
+  navegador (refrescar con F5).
 - **Notificacion real de Telegram confirmada (2026-08-30):** con `TELEGRAM_BOT_TOKEN` y
   `TELEGRAM_CHAT_ID` reales cargados en `.env` y el servicio reiniciado, se corrio el
   emulador (Escenario A) contra el stack Docker real. Logs de `servicio` confirman la
