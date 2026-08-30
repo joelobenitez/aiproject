@@ -59,6 +59,12 @@ def diagnosticar(entrada: dict) -> dict:
             timeout=_TIMEOUT_SEGUNDOS,
         )
         texto = "".join(bloque.text for bloque in respuesta.content if bloque.type == "text")
+        texto = texto.strip()
+        if texto.startswith("```"):
+            texto = texto.split("\n", 1)[1] if "\n" in texto else ""
+            if texto.endswith("```"):
+                texto = texto.rsplit("```", 1)[0]
+            texto = texto.strip()
         resultado = json.loads(texto)
 
         if not isinstance(resultado, dict) or not _CLAVES_ESPERADAS.issubset(resultado.keys()):

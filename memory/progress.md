@@ -1,19 +1,19 @@
 # Progress — aiproject
 
-> **Ultima actualizacion:** 2026-08-29
+> **Ultima actualizacion:** 2026-08-30
 > **Donde estamos:** MVP del feature `001-diagnostico-motor-industrial` IMPLEMENTADO,
-> VALIDADO EN DOCKER REAL, COMMITEADO Y PUSHEADO. `/speckit-implement` corrido de punta a
-> punta: 38/38 tareas de `tasks.md` completas. Codigo en `src/` +
-> `herramientas/emulador_motor.py` + `docker-compose.yml` + provisioning de Grafana. 31
-> tests de pytest en verde. Stack levantado con `docker compose up` (broker+influxdb+
-> servicio+grafana) y probado end-to-end con el emulador real: deteccion, persistencia
-> SQLite/InfluxDB, degradacion controlada de diagnostico/notificacion (sin credenciales
-> reales todavia) y Grafana provisionado, todo confirmado funcionando. Commit `2badaab`
-> pusheado a `main` en GitHub — repo local y remoto identicos (verificado 2026-08-29,
-> `git rev-list --left-right --count origin/main...HEAD` → `0 0`). Solo falta probar el
-> diagnostico real de Claude y la notificacion real de Telegram (requiere cargar
-> `ANTHROPIC_API_KEY`/`TELEGRAM_BOT_TOKEN`/`CHAT_ID` reales en `.env`, que hoy esta vacio
-> a proposito y NO esta trackeado en git) y mirar el dashboard en el navegador. Metodo de
+> VALIDADO EN DOCKER REAL CON DIAGNOSTICO REAL DE CLAUDE FUNCIONANDO END-TO-END.
+> `/speckit-implement` corrido de punta a punta: 38/38 tareas de `tasks.md` completas.
+> Codigo en `src/` + `herramientas/emulador_motor.py` + `docker-compose.yml` +
+> provisioning de Grafana. 31 tests de pytest en verde. Commit `2badaab` pusheado a `main`
+> en GitHub (2026-08-29). El 2026-08-30 se cargaron $5 reales en `console.anthropic.com` y
+> se probo el diagnostico real de Claude: encontramos y arreglamos un bug real de parseo
+> (ver `memory/decisions.md` / seccion abajo) — con el fix, MQTT → deteccion → **Claude
+> real** → SQLite/InfluxDB confirmado funcionando sin fallos en 2 alertas seguidas. El fix
+> esta en `src/diagnostico/parser.py`, modificado pero **todavia NO commiteado** (working
+> tree con `M src/diagnostico/parser.py` al cierre de esta sesion). Solo falta: commitear
+> el fix, probar la notificacion real de Telegram (requiere `TELEGRAM_BOT_TOKEN`/`CHAT_ID`
+> reales en `.env`, hoy vacios a proposito) y mirar el dashboard en el navegador. Metodo de
 > memoria multisesion instalado (D6).
 
 ---
@@ -47,26 +47,53 @@ Ninguno bloqueante. Ver "Pendientes sueltos" abajo para lo que falta cerrar.
 
 ## Proximos pasos
 
-**Foco de la proxima sesion (default):** el MVP esta implementado, validado en Docker real
-y commiteado/pusheado (`2badaab`, `main`, local y remoto identicos). No hay nada bloqueante
-pendiente — lo que queda es opcional/de mejora continua.
+**Foco de la proxima sesion (default):** el diagnostico real de Claude ya funciona
+end-to-end (2026-08-30). No hay nada bloqueante pendiente.
 
 Pendiente, en orden sugerido:
-1. Cargar credenciales reales (`ANTHROPIC_API_KEY` en la consola de developer de Anthropic,
-   NO el credito de suscripcion de Claude.ai que es una billetera distinta — ver conversacion
-   2026-08-29; `TELEGRAM_BOT_TOKEN`/`CHAT_ID`) en `.env` y reiniciar el servicio para ver el
-   diagnostico real de Claude y la notificacion real de Telegram funcionando.
-2. Mirar el dashboard de Grafana en el navegador (`http://localhost:3000`) para confirmar
+1. **Commitear el fix de `src/diagnostico/parser.py`** (bug de parseo cuando Claude envuelve
+   el JSON en ` ```json `, ver "Pendientes sueltos" abajo) — es lo primero que falta cerrar,
+   quedo sin commitear al final de la sesion 2026-08-30.
+2. Cargar `TELEGRAM_BOT_TOKEN`/`CHAT_ID` reales en `.env` y reiniciar el servicio para ver
+   la notificacion real de Telegram funcionando (Claude ya esta confirmado funcionando).
+3. Mirar el dashboard de Grafana en el navegador (`http://localhost:3000`) para confirmar
    visualmente lo que ya se valido por API (datasource sano, dashboard provisionado).
-3. Reconciliar `spec.md` con el alcance real implementado (Historia 3/email fuera de
+4. Reconciliar `spec.md` con el alcance real implementado (Historia 3/email fuera de
    alcance — ver nota abajo, arrastrada desde `/speckit-plan`).
-4. Enmienda de `/speckit-constitution` para que el Principio I reconozca la excepcion de
+5. Enmienda de `/speckit-constitution` para que el Principio I reconozca la excepcion de
    fase MVP (D9) — sigue pendiente, no bloquea nada.
 
 ---
 
 ## Pendientes sueltos
 
+- **Diagnostico real de Claude confirmado + bug de parseo encontrado y arreglado
+  (2026-08-30):** con $5 de credito cargados en `console.anthropic.com`, se probo el
+  nucleo de diagnostico contra la API real.
+  - **Primer obstaculo (resuelto):** la primera API key generada era de tipo
+    "identity-linked" — el servidor de Anthropic devolvia 400 pidiendo un header
+    `anthropic-workspace-id` que el codigo no manda. Confirmado con curl/httpx directo
+    contra `api.anthropic.com`, sin pasar por nuestro codigo ni el SDK, mismo error. Se
+    descarto tocar el codigo (a pedido de Joelo) y en cambio se regenero la key
+    seleccionando explicitamente un workspace especifico en la consola (no la vista
+    "identity-linked"/personal) — la key nueva autentica sin ese header.
+  - **Segundo obstaculo (resuelto, bug real en codigo):** con la key nueva autenticando
+    bien (200 OK), la mayoria de las llamadas (~75% en las pruebas) fallaban al hacer
+    `json.loads()` en `src/diagnostico/parser.py` con `JSONDecodeError: Expecting value:
+    line 1 column 1`. Causa confirmada reproduciendo la llamada 3 veces con el mismo
+    input: Claude a veces envuelve la respuesta en un bloque de markdown (` ```json ... ```
+    `) a pesar de que el system prompt pide "UNICAMENTE un objeto JSON, sin texto
+    adicional" — es un comportamiento intermitente del modelo, no controlable solo por
+    prompt. Fix aplicado en `src/diagnostico/parser.py` (linea ~62): si el texto empieza
+    con ` ``` `, se le saca el fence antes de parsear. 31/31 tests pytest siguen en verde
+    despues del fix. Validado end-to-end con el emulador (escenario A) contra el stack
+    Docker real: 2 alertas seguidas (#14, #15), diagnostico generado sin fallos en ambas.
+  - **Estado del fix:** modificado en el working tree, **no commiteado todavia** —
+    prioridad #1 de la proxima sesion (ver "Proximos pasos").
+  - Nota operativa: cada vez que se reinicia Windows hay que volver a chequear que el
+    mosquitto nativo de Windows (servicio) no este compitiendo por el puerto 1883 antes de
+    `docker compose up` — ver `memory/risks.md`. Se repitio este bloqueo en esta sesion,
+    se resolvio igual que la vez anterior (`net stop mosquitto`, admin).
 - **Implementacion del MVP (2026-08-29):** `/speckit-implement` corrido completo. 37/38
   tareas de `tasks.md` en `[X]`. Codigo en `src/` (ingesta, deteccion, diagnostico,
   notificacion, almacenamiento, main.py), `herramientas/emulador_motor.py` (4 escenarios
@@ -95,17 +122,12 @@ Pendiente, en orden sugerido:
 - **Commit y push (2026-08-29):** Joelo pidio el commit — hecho como `2badaab` en `main` y
   pusheado a `github.com/joelobenitez/aiproject`. Verificado: working tree limpio, local y
   remoto identicos (`git rev-list --left-right --count origin/main...HEAD` → `0 0`).
-- **Facturacion de la API de Claude (2026-08-29):** Joelo tiene $90.23 de credito
-  promocional (vence 19/9/2026) pero es de su cuenta de Claude.ai, NO de
-  `console.anthropic.com` (la consola de developer que factura el `ANTHROPIC_API_KEY` que
-  usa `src/config.py`) — son billeteras separadas, confirmado via busqueda web. Desde el
-  15/6/2026 Anthropic tiene un "Agent SDK credit" mensual atado a los planes pagos de
-  Claude.ai/Code para uso programatico via sus propias herramientas (Agent SDK, `claude -p`,
-  GitHub Actions), pero se consume autenticando como suscriptor, no via una API key suelta
-  como la que usa este proyecto. Conclusion: para probar el diagnostico real hay que revisar
-  el saldo en `console.anthropic.com` y cargar el minimo (~$5) si esta en cero — a esta
-  escala de uso (estimado centavos de dolar por diagnostico con Haiku 4.5 + prompt caching)
-  alcanza para meses.
+- **Facturacion de la API de Claude (2026-08-29, RESUELTO 2026-08-30):** Joelo tenia $90.23
+  de credito promocional en su cuenta de Claude.ai, distinto de `console.anthropic.com` (la
+  consola de developer que factura `ANTHROPIC_API_KEY`) — son billeteras separadas. El
+  2026-08-30 Joelo cargo $5 reales en `console.anthropic.com` y se confirmo funcionando (ver
+  entrada de diagnostico real arriba). A esta escala de uso (diagnostico con Haiku 4.5 +
+  prompt caching) deberia alcanzar para meses.
 - `/speckit-plan` (corrido 2026-08-29) dejo dos items deliberadamente diferidos (confirmado
   por Joelo, no bloqueantes): (1) `spec.md` sigue exigiendo Email/Historia 3 pero la
   implementacion los deja fuera de alcance — falta actualizar `spec.md` para que no diverja
