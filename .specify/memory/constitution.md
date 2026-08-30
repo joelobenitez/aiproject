@@ -1,33 +1,29 @@
 <!--
 Sync Impact Report
 ==================
-Version change: [TEMPLATE] -> 1.0.0 (ratificacion inicial)
-Bump rationale: primera version completa de la constitucion (no habia contenido previo mas
-alla del template vacio) -> MAJOR/inicial 1.0.0 segun convencion semver para primera release.
+Version change: 1.0.0 -> 1.1.0
+Bump rationale: MINOR — se agrega una excepcion documentada al Principio I (guia material
+nueva dentro de un principio existente), sin remover ni redefinir el principio para su
+alcance original (arquitectura de escala real, D11).
 
-Principios definidos (nuevos, no hay renombres porque no existia contenido previo):
-- I. Separacion de Capas (Datos / Orquestacion / Inteligencia)
-- II. Deteccion Barata, Diagnostico con Contexto
-- III. Un Cerebro, Muchos Consumidores
-- IV. Seguridad por Niveles en Canales de Entrada
-- V. Documentacion y Decisiones Trazables
+Principios modificados:
+- I. Separacion de Capas (Datos / Orquestacion / Inteligencia) — se agrega el parrafo
+  "Excepcion de fase MVP (D9)", que reconoce que el MVP demostrativo colapsa Node-RED y n8n
+  en un unico servicio Python (`src/`), y aclara que esta excepcion no aplica a la
+  arquitectura de escala industrial real (D11). El resto del principio (II-V) no cambia.
 
-Secciones agregadas:
-- Requisitos Tecnicos (SECTION_2)
-- Flujo de Trabajo de Desarrollo (SECTION_3)
-- Governance
+Secciones agregadas: ninguna.
+Secciones removidas: ninguna.
 
-Secciones removidas: ninguna (se reemplazo el scaffold vacio).
+Placeholders sin resolver: ninguno.
 
-Placeholders sin resolver: ninguno. RATIFICATION_DATE se fija en 2026-08-29 (fecha de esta
-sesion) porque no hay una fecha de ratificacion formal anterior registrada; las decisiones
-D1-D7 que sostienen estos principios son anteriores mais no constituyen una "ratificacion"
-de constitucion per se.
+Contexto: la implementacion del MVP (2026-08-29/30) ya opera bajo la excepcion de D9; esta
+enmienda solo formaliza en la constitucion algo que el codigo, `plan.md` y `tasks.md` ya
+reflejaban, para que el gate de constitucion de `/speckit-plan` no marque a D9 como
+violacion no reconocida en futuras sesiones.
 
 Templates dependientes: no se modificaron en este comando (fuera de alcance de
-/speckit-constitution). Revisar en el proximo /speckit-plan que las referencias a capas
-(Node-RED/n8n/Claude Agent) y al idioma sin tildes sigan siendo consistentes con esta
-version.
+/speckit-constitution).
 -->
 
 # Aiproject Constitution
@@ -43,10 +39,21 @@ natural, reportes). Ningun componente MUST asumir la responsabilidad de otro: no
 implementa logica de diagnostico en n8n, ni orquestacion de workflows dentro de Node-RED,
 ni ingesta de datos crudos en el Claude Agent.
 
+**Excepcion de fase MVP (D9):** durante el MVP demostrativo, esta separacion se colapsa
+deliberadamente en un unico servicio Python de vida larga (`src/`) que asume a la vez los
+roles de Node-RED y n8n (ingesta MQTT, deteccion de umbral, armado de contexto y llamada al
+Claude Agent). Esta excepcion es temporal y especifica de la fase MVP — no redefine el
+principio para la arquitectura de escala industrial real (D11), donde la separacion de
+capas se recupera (detector stateful separado de workers de diagnostico escalables). MUST
+NOT tomarse como precedente para omitir la separacion de capas fuera del contexto MVP sin
+una decision equivalente registrada en `memory/decisions.md`.
+
 **Por que:** es la arquitectura ya validada en D1 y D3 (`memory/decisions.md`). Mezclar
 capas fue evaluado y descartado explicitamente porque cada herramienta es fragil fuera de
 su rol natural (n8n sin soporte nativo de MQTT/Modbus, Node-RED sin capacidad de sostener
-logica compleja de negocio).
+logica compleja de negocio). La excepcion del MVP (D9) se justifica en que Node-RED y n8n
+son herramientas de bajo-codigo sin nada que Claude Code pueda escribir, revisar o testear,
+y en que el volumen de una demo de un solo motor no justifica su complejidad operativa.
 
 ### II. Deteccion Barata, Diagnostico con Contexto
 La deteccion de anomalias (cruce de umbral, tasa de cambio en ventana corta) vive en
@@ -132,4 +139,4 @@ de generar artefactos. `CLAUDE.md` y `memory/` son las fuentes de guia operativa
 de ejecucion; esta constitucion es la fuente de las reglas no negociables que esa guia
 operativa MUST respetar.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-29 | **Last Amended**: 2026-08-29
+**Version**: 1.1.0 | **Ratified**: 2026-08-29 | **Last Amended**: 2026-08-30

@@ -316,3 +316,28 @@ necesaria para el MVP (D9-D10). Se registra ahora como referencia a futuro para 
 el razonamiento de la sesion, y para que D9 (simplificacion del MVP) no se lea como un
 abandono permanente de la separacion de capas de D1/D3 — es una postergacion tecnica, no un
 cambio de dirección.
+
+---
+
+## D12 — Enmienda de la constitucion (v1.1.0): Principio I reconoce la excepcion de fase MVP de D9
+
+**Fecha:** 2026-08-30
+**Quien decidio:** Joelo + Claude Code
+
+**Decision:** se enmienda `.specify/memory/constitution.md` (1.0.0 -> 1.1.0, MINOR) para
+agregar al Principio I (Separacion de Capas) un parrafo explicito de "Excepcion de fase
+MVP" que reconoce que el servicio Python del MVP (`src/`) colapsa deliberadamente los roles
+de Node-RED y n8n, tal como ya establecia D9. Se aclara ademas que esta excepcion es
+temporal y no aplica a la arquitectura de escala industrial real de D11, donde la
+separacion de capas se recupera.
+
+**Por que:** D9 (2026-08-29) ya justificaba y documentaba esta desviacion respecto del
+Principio I original, pero la constitucion nunca se actualizo para reflejarla — quedaba la
+inconsistencia de que el gate de `/speckit-plan` marcaba a D9 como "violado pero
+justificado" en vez de como una excepcion reconocida formalmente. Esta enmienda no crea una
+decision nueva de arquitectura: solo formaliza en la constitucion algo que D9, `plan.md` y
+`tasks.md` ya reflejaban desde la implementacion del MVP.
+
+**Alcance:** no modifica los Principios II-V ni ninguna otra seccion de la constitucion. No
+habilita omitir la separacion de capas fuera del contexto MVP sin una decision equivalente
+registrada aca.

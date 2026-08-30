@@ -11,6 +11,15 @@ industrial simulado (temperatura, corriente, vibracion, horas de operacion) dond
 anomalia, el sistema no solo alerta sino que genera un diagnostico en lenguaje natural con
 causa probable, urgencia, accion recomendada y nivel de confianza.
 
+> **Nota post-implementacion (2026-08-30, D9):** esta spec se escribio antes de D9 (MVP
+> simplificado). El correo (Email/SMTP) se postergo a una fase posterior junto con Web
+> Report — no se implemento en el MVP. Afecta: la mitad de Historia 2 que depende de
+> correo, Historia 3 completa, FR-007, FR-008 y SC-006, marcados abajo como **diferido
+> (D9)**. El resto de la spec (Historias 1, 2-Telegram, 4 y el resto de los FR/SC) esta
+> implementado y validado en Docker con credenciales reales (ver `memory/progress.md`).
+> Este divergencia ya estaba documentada en `plan.md`/`tasks.md`; esta nota la deja tambien
+> en la spec para que no diverja del alcance real. Ver `memory/decisions.md` D9.
+
 ## Escenarios de Usuario y Pruebas *(mandatory)*
 
 ### Historia de Usuario 1 - Diagnostico accionable ante una anomalia (Priority: P1)
@@ -74,11 +83,15 @@ el emulador este corriendo en ese momento.
    dentro de los 90 segundos desde el evento que disparo la anomalia.
 2. **Given** se genero un diagnostico con urgencia ALTA (critico), **When** el diagnostico
    queda listo, **Then** ademas del canal operativo inmediato, se envia un correo
-   inmediato como respaldo.
+   inmediato como respaldo. *(Diferido — D9: sin canal de correo en el MVP)*
 
 ---
 
-### Historia de Usuario 3 - Reporte ejecutivo diario (Priority: P2)
+### Historia de Usuario 3 - Reporte ejecutivo diario (Priority: P2) — *Diferido (D9)*
+
+> Fuera de alcance del MVP: postergada a una fase posterior junto con Email/Web Report
+> (D9). No tiene tareas en `tasks.md`. Se mantiene documentada aca como backlog, sin
+> cambios al contenido original de la historia.
 
 Un responsable de planta que no sigue las alertas en tiempo real quiere, cada manana, un
 resumen de que paso el dia anterior: cuantas alertas hubo, de que equipos, cuales eran
@@ -168,12 +181,12 @@ momento.
   asociado al equipo y al evento que lo origino.
 - **FR-006**: El sistema MUST notificar el diagnostico por un canal operativo inmediato
   (mensajeria) dentro de los 90 segundos desde el evento que disparo la deteccion.
-- **FR-007**: El sistema MUST enviar ademas una notificacion por correo cuando la urgencia
-  del diagnostico sea ALTA (critica), sin depender de que el operador este viendo el canal
-  de mensajeria en ese momento.
-- **FR-008**: El sistema MUST generar, con periodicidad diaria, un reporte que resuma las
-  alertas y diagnosticos del periodo anterior y enviarlo por correo, incluso cuando no hubo
-  alertas en ese periodo.
+- **FR-007** *(Diferido — D9)*: El sistema MUST enviar ademas una notificacion por correo
+  cuando la urgencia del diagnostico sea ALTA (critica), sin depender de que el operador
+  este viendo el canal de mensajeria en ese momento.
+- **FR-008** *(Diferido — D9)*: El sistema MUST generar, con periodicidad diaria, un
+  reporte que resuma las alertas y diagnosticos del periodo anterior y enviarlo por correo,
+  incluso cuando no hubo alertas en ese periodo.
 - **FR-009**: El sistema MUST mostrar la serie de tiempo de las variables del motor en un
   dashboard que se actualiza en vivo, con marcas visuales en los puntos donde ocurrieron
   alertas.
@@ -219,8 +232,8 @@ momento.
   diagnostico generado coincide con la causa simulada por el emulador.
 - **SC-005**: durante operacion normal simulada (fluctuacion dentro de rango), la tasa de
   alertas generadas es cero (sin falsos positivos).
-- **SC-006**: el reporte ejecutivo diario esta disponible todos los dias, incluidos los dias
-  sin alertas.
+- **SC-006** *(Diferido — D9)*: el reporte ejecutivo diario esta disponible todos los dias,
+  incluidos los dias sin alertas.
 - **SC-007**: el dashboard en vivo refleja una lectura nueva del motor sin que el operador
   tenga que refrescar la pagina manualmente.
 

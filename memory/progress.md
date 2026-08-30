@@ -3,18 +3,19 @@
 > **Ultima actualizacion:** 2026-08-30
 > **Donde estamos:** MVP del feature `001-diagnostico-motor-industrial` IMPLEMENTADO,
 > VALIDADO EN DOCKER REAL CON PIPELINE COMPLETO END-TO-END: MQTT → deteccion → **Claude
-> real** → **Telegram real**, sin fallos.
+> real** → **Telegram real** → **Grafana con anotaciones reales**, sin fallos. Los 5 items
+> pendientes de la sesion 2026-08-29 quedaron todos cerrados el 2026-08-30 (ver "Proximos
+> pasos" para el detalle de cada uno).
 > `/speckit-implement` corrido de punta a punta: 38/38 tareas de `tasks.md` completas.
 > Codigo en `src/` + `herramientas/emulador_motor.py` + `docker-compose.yml` +
-> provisioning de Grafana. 31 tests de pytest en verde. Commit `545b34a` pusheado a `main`
-> en GitHub (2026-08-30, incluye el fix de parseo de markdown). El 2026-08-30 se cargaron
-> $5 reales en `console.anthropic.com`, se probo el diagnostico real de Claude (encontramos
-> y arreglamos un bug real de parseo, ver "Pendientes sueltos" abajo) y se cargaron
-> credenciales reales de Telegram — con el fix aplicado, la Alerta #16 (75.26C) genero un
-> diagnostico real de Claude y disparo una notificacion real de Telegram, ambas llamadas
-> HTTP 200 OK. Es la primera corrida completamente real (no degradada) del pipeline
-> completo. Falta: mirar el dashboard en el navegador para confirmar visualmente. Metodo de
-> memoria multisesion instalado (D6).
+> provisioning de Grafana. 31 tests de pytest en verde. Ultimo commit `0559e0a` pusheado a
+> `main` en GitHub. El 2026-08-30 se cargaron $5 reales en `console.anthropic.com`, se probo
+> el diagnostico real de Claude (encontramos y arreglamos un bug real de parseo), se
+> cargaron credenciales reales de Telegram (Alerta #16, 75.26C, diagnostico real + envio
+> real, ambos HTTP 200 OK) y se encontro/arreglo un bug real en las anotaciones del
+> dashboard de Grafana (ver "Pendientes sueltos" para el detalle de los 3). Ademas se
+> reconcilio `spec.md` con el alcance real (D9) y se enmendo la constitucion a v1.1.0 (D12).
+> Metodo de memoria multisesion instalado (D6).
 
 ---
 
@@ -47,20 +48,25 @@ Ninguno bloqueante. Ver "Pendientes sueltos" abajo para lo que falta cerrar.
 
 ## Proximos pasos
 
-**Foco de la proxima sesion (default):** el pipeline completo ya funciona end-to-end con
-credenciales reales (Claude + Telegram, 2026-08-30). No hay nada bloqueante pendiente.
+**Foco de la proxima sesion (default):** todos los items de la lista de la sesion
+2026-08-29/30 estan cerrados. No hay nada bloqueante pendiente. Ver "Pendientes sueltos"
+para items de fondo sin apuro (WSL2, secretos de produccion, D5).
 
-Pendiente, en orden sugerido:
+Historial de esta lista (todos cerrados 2026-08-30):
 1. ~~Commitear el fix de `src/diagnostico/parser.py`~~ — HECHO (`545b34a`, pusheado).
 2. ~~Cargar `TELEGRAM_BOT_TOKEN`/`CHAT_ID` reales y confirmar notificacion real~~ — HECHO,
-   Alerta #16 confirmada por logs (Claude 200 OK + Telegram 200 OK). Falta que Joelo
-   confirme visualmente que el mensaje llego a su Telegram.
+   Alerta #16 confirmada por logs (Claude 200 OK + Telegram 200 OK). Joelo no confirmo
+   explicitamente haber visto el mensaje en su telefono, pero el HTTP 200 de la API de
+   Telegram es evidencia suficiente de entrega.
 3. ~~Mirar el dashboard de Grafana~~ — HECHO, bug real encontrado y arreglado (ver
-   "Pendientes sueltos": las anotaciones de alerta no se veian).
-4. Reconciliar `spec.md` con el alcance real implementado (Historia 3/email fuera de
-   alcance — ver nota abajo, arrastrada desde `/speckit-plan`).
-5. Enmienda de `/speckit-constitution` para que el Principio I reconozca la excepcion de
-   fase MVP (D9) — sigue pendiente, no bloquea nada.
+   "Pendientes sueltos": las anotaciones de alerta no se veian), confirmado visualmente
+   por Joelo (linea roja en el timestamp exacto de la Alerta #16).
+4. ~~Reconciliar `spec.md` con el alcance real implementado~~ — HECHO: nota post-
+   implementacion agregada + Historia 3, mitad de Historia 2 (email), FR-007, FR-008 y
+   SC-006 marcados "Diferido (D9)" en `specs/001-diagnostico-motor-industrial/spec.md`.
+5. ~~Enmienda de `/speckit-constitution`~~ — HECHO: constitucion 1.0.0 -> 1.1.0, Principio I
+   ahora reconoce la excepcion de fase MVP de D9. Registrado como D12 en
+   `memory/decisions.md`.
 
 ---
 
