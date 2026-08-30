@@ -2,18 +2,18 @@
 
 > **Ultima actualizacion:** 2026-08-30
 > **Donde estamos:** MVP del feature `001-diagnostico-motor-industrial` IMPLEMENTADO,
-> VALIDADO EN DOCKER REAL CON DIAGNOSTICO REAL DE CLAUDE FUNCIONANDO END-TO-END.
+> VALIDADO EN DOCKER REAL CON PIPELINE COMPLETO END-TO-END: MQTT → deteccion → **Claude
+> real** → **Telegram real**, sin fallos.
 > `/speckit-implement` corrido de punta a punta: 38/38 tareas de `tasks.md` completas.
 > Codigo en `src/` + `herramientas/emulador_motor.py` + `docker-compose.yml` +
-> provisioning de Grafana. 31 tests de pytest en verde. Commit `2badaab` pusheado a `main`
-> en GitHub (2026-08-29). El 2026-08-30 se cargaron $5 reales en `console.anthropic.com` y
-> se probo el diagnostico real de Claude: encontramos y arreglamos un bug real de parseo
-> (ver `memory/decisions.md` / seccion abajo) — con el fix, MQTT → deteccion → **Claude
-> real** → SQLite/InfluxDB confirmado funcionando sin fallos en 2 alertas seguidas. El fix
-> esta en `src/diagnostico/parser.py`, modificado pero **todavia NO commiteado** (working
-> tree con `M src/diagnostico/parser.py` al cierre de esta sesion). Solo falta: commitear
-> el fix, probar la notificacion real de Telegram (requiere `TELEGRAM_BOT_TOKEN`/`CHAT_ID`
-> reales en `.env`, hoy vacios a proposito) y mirar el dashboard en el navegador. Metodo de
+> provisioning de Grafana. 31 tests de pytest en verde. Commit `545b34a` pusheado a `main`
+> en GitHub (2026-08-30, incluye el fix de parseo de markdown). El 2026-08-30 se cargaron
+> $5 reales en `console.anthropic.com`, se probo el diagnostico real de Claude (encontramos
+> y arreglamos un bug real de parseo, ver "Pendientes sueltos" abajo) y se cargaron
+> credenciales reales de Telegram — con el fix aplicado, la Alerta #16 (75.26C) genero un
+> diagnostico real de Claude y disparo una notificacion real de Telegram, ambas llamadas
+> HTTP 200 OK. Es la primera corrida completamente real (no degradada) del pipeline
+> completo. Falta: mirar el dashboard en el navegador para confirmar visualmente. Metodo de
 > memoria multisesion instalado (D6).
 
 ---
@@ -47,15 +47,14 @@ Ninguno bloqueante. Ver "Pendientes sueltos" abajo para lo que falta cerrar.
 
 ## Proximos pasos
 
-**Foco de la proxima sesion (default):** el diagnostico real de Claude ya funciona
-end-to-end (2026-08-30). No hay nada bloqueante pendiente.
+**Foco de la proxima sesion (default):** el pipeline completo ya funciona end-to-end con
+credenciales reales (Claude + Telegram, 2026-08-30). No hay nada bloqueante pendiente.
 
 Pendiente, en orden sugerido:
-1. **Commitear el fix de `src/diagnostico/parser.py`** (bug de parseo cuando Claude envuelve
-   el JSON en ` ```json `, ver "Pendientes sueltos" abajo) — es lo primero que falta cerrar,
-   quedo sin commitear al final de la sesion 2026-08-30.
-2. Cargar `TELEGRAM_BOT_TOKEN`/`CHAT_ID` reales en `.env` y reiniciar el servicio para ver
-   la notificacion real de Telegram funcionando (Claude ya esta confirmado funcionando).
+1. ~~Commitear el fix de `src/diagnostico/parser.py`~~ — HECHO (`545b34a`, pusheado).
+2. ~~Cargar `TELEGRAM_BOT_TOKEN`/`CHAT_ID` reales y confirmar notificacion real~~ — HECHO,
+   Alerta #16 confirmada por logs (Claude 200 OK + Telegram 200 OK). Falta que Joelo
+   confirme visualmente que el mensaje llego a su Telegram.
 3. Mirar el dashboard de Grafana en el navegador (`http://localhost:3000`) para confirmar
    visualmente lo que ya se valido por API (datasource sano, dashboard provisionado).
 4. Reconciliar `spec.md` con el alcance real implementado (Historia 3/email fuera de
@@ -88,12 +87,21 @@ Pendiente, en orden sugerido:
     con ` ``` `, se le saca el fence antes de parsear. 31/31 tests pytest siguen en verde
     despues del fix. Validado end-to-end con el emulador (escenario A) contra el stack
     Docker real: 2 alertas seguidas (#14, #15), diagnostico generado sin fallos en ambas.
-  - **Estado del fix:** modificado en el working tree, **no commiteado todavia** —
-    prioridad #1 de la proxima sesion (ver "Proximos pasos").
+  - **Estado del fix:** commiteado y pusheado como `545b34a` (2026-08-30).
   - Nota operativa: cada vez que se reinicia Windows hay que volver a chequear que el
     mosquitto nativo de Windows (servicio) no este compitiendo por el puerto 1883 antes de
     `docker compose up` — ver `memory/risks.md`. Se repitio este bloqueo en esta sesion,
     se resolvio igual que la vez anterior (`net stop mosquitto`, admin).
+- **Notificacion real de Telegram confirmada (2026-08-30):** con `TELEGRAM_BOT_TOKEN` y
+  `TELEGRAM_CHAT_ID` reales cargados en `.env` y el servicio reiniciado, se corrio el
+  emulador (Escenario A) contra el stack Docker real. Logs de `servicio` confirman la
+  Alerta #16 (temperatura=75.26C): llamada a `api.anthropic.com` → `200 OK`, diagnostico
+  generado ("degradacion del sistema de refrigeracion o ambiente de operacion mas
+  calido"), llamada a `api.telegram.org/.../sendMessage` → `200 OK`. Primera corrida
+  completamente real (sin ningun componente degradado/mockeado) del pipeline completo:
+  MQTT → deteccion → Claude real → Telegram real. Verificado tambien con una llamada
+  `httpx` directa a la API de Telegram (fuera de Docker/nuestro codigo) antes de esta
+  prueba, confirmando que el bot y el chat_id eran validos.
 - **Implementacion del MVP (2026-08-29):** `/speckit-implement` corrido completo. 37/38
   tareas de `tasks.md` en `[X]`. Codigo en `src/` (ingesta, deteccion, diagnostico,
   notificacion, almacenamiento, main.py), `herramientas/emulador_motor.py` (4 escenarios
