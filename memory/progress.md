@@ -15,10 +15,15 @@
 > `POST /diagnosticar/<alerta_id>` contra un servidor HTTP nuevo embebido en el servicio
 > (`src/api.py`, puerto 8000). Validado en vivo contra el stack Docker de esta terminal
 > (Alerta #3: mensaje crudo → pedido on-demand → diagnostico + notificacion → pedido
-> repetido devuelve cache sin re-llamar a Claude). 36/36 tests pytest en verde (31 + 5
-> nuevos). Ver D13 en `memory/decisions.md` y el riesgo nuevo en `memory/risks.md`
-> (endpoint sin autenticacion). **Pendiente: commitear estos cambios y actualizar el
-> commit/tests en la terminal de desarrollo original tambien.**
+> repetido devuelve cache sin re-llamar a Claude). Se repitio la validacion completa con
+> `ANTHROPIC_API_KEY` real (Alerta #4: diagnostico real generado, causa probable + urgencia
+> ALTA + accion recomendada coherentes, notificacion Telegram y cache confirmados). 36/36
+> tests pytest en verde (31 + 5 nuevos). Ver D13 en `memory/decisions.md` y el riesgo nuevo
+> en `memory/risks.md` (endpoint sin autenticacion). **Commiteado y pusheado**: `103d3da` en
+> `main` en GitHub. Se genero ademas un prompt detallado para armar el diagrama de
+> arquitectura en Claude Design (entregado en el chat de esta sesion, no guardado como
+> archivo en el repo). **Pendiente: hacer `git pull` en la terminal de desarrollo original
+> (carpeta `joelo`, ver `memory/risks.md`) para traer estos cambios ahi tambien.**
 > `/speckit-implement` corrido de punta a punta: 38/38 tareas de `tasks.md` completas (pre-
 > D13; D13 es posterior al MVP formal de Spec Kit, no paso por el loop `/speckit-*`).
 > Codigo en `src/` + `herramientas/emulador_motor.py` + `docker-compose.yml` +
@@ -47,7 +52,7 @@
 | Stack objetivo del MVP | REDEFINIDO (D9) — broker MQTT + InfluxDB + Grafana + 1 servicio Python (colapsa Node-RED+n8n+Agent), SQLite en vez de MySQL, Email/Web Report postergados |
 | Stack objetivo a escala industrial | Roadmap anotado (D11) — vuelve a separar detector/diagnostico, RUT956 real, EMQX cluster, Postgres/MySQL, dimensionamiento de hardware |
 | Contratos de datos (MQTT payload, schema InfluxDB, schema DB, contrato interno del servicio Python) | HECHO — `specs/001-diagnostico-motor-industrial/contracts/` + `data-model.md`, implementados en `src/` |
-| Codigo del MVP (`src/`, `herramientas/emulador_motor.py`) | IMPLEMENTADO — pipeline completo ingesta→deteccion→diagnostico→notificacion→Grafana. Con D13 (2026-08-31, sin commitear aun): diagnostico automatico solo en CRITICO + endpoint HTTP `/diagnosticar/<id>` para ALERTA. 36 tests pytest en verde |
+| Codigo del MVP (`src/`, `herramientas/emulador_motor.py`) | IMPLEMENTADO Y COMMITEADO — pipeline completo ingesta→deteccion→diagnostico→notificacion→Grafana. Con D13 (2026-08-31, commit `103d3da`): diagnostico automatico solo en CRITICO + endpoint HTTP `/diagnosticar/<id>` para ALERTA. 36 tests pytest en verde |
 | Docker Compose real (version MVP simplificada) | VALIDADO — `docker compose up -d --build` corrido con exito (broker+influxdb+servicio+grafana), pipeline probado end-to-end con el emulador real (ver "Pendientes sueltos") |
 | Memoria multi-sesion (este metodo) | INSTALADO — 2026-08-29 |
 
@@ -61,12 +66,19 @@ Ninguno bloqueante. Ver "Pendientes sueltos" abajo para lo que falta cerrar.
 
 ## Proximos pasos
 
-**Foco de la proxima sesion (default):** commitear y pushear los cambios de D13 (diagnostico
-bajo demanda) hechos el 2026-08-31 en la terminal `C:\Users\jbenitez\proyectos\aiproject` —
-working tree con cambios sin commitear al cierre de esta sesion. Camino natural despues de
-eso (no urgente, ver D13): opcion A del analisis — boton inline de Telegram sobre el mismo
-`diagnosticar_bajo_demanda`, si se decide pagar el costo de infraestructura del receptor de
-D2 Nivel 1 (webhook/tunel o long-polling).
+**Foco de la proxima sesion (default):** hacer `git pull` en la terminal de desarrollo
+original (carpeta `joelo`) para traer el commit `103d3da` (D13) — no bloqueante, pero hay
+que hacerlo antes de seguir trabajando desde esa terminal para no divergir.
+
+**Anotado como trabajo futuro (no urgente, sin fecha):** escalar la infraestructura de
+Telegram a **Nivel 1** (ver D2 en `memory/decisions.md` y el "camino natural siguiente" de
+D13) — hoy el bot es solo push (Nivel 0) mas el endpoint HTTP de D13 para pedir diagnosticos
+desde afuera de Telegram. Subir a Nivel 1 significa agregar el receptor que D2 ya
+anticipaba: webhook (necesita tunel en dev local, ej. cloudflared/ngrok) o long-polling +
+allowlist de chat_id, para que el propio Telegram pueda disparar
+`diagnosticar_bajo_demanda` (por ejemplo con un boton inline, opcion A del analisis de
+D13) en vez de depender de un cliente HTTP externo. Es el paso que mas valor agrega si el
+modelo bajo-demanda de D13 resulta util en el uso real.
 
 Los items de la lista de la sesion 2026-08-29/30 (distinta) siguen cerrados. Ver "Pendientes
 sueltos" para items de fondo sin apuro (WSL2, secretos de produccion, D5, autenticacion del
