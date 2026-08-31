@@ -127,3 +127,22 @@ ratificado en v1.0.0 con 5 principios basados en D1-D8. `/speckit-specify`, `/sp
 `/speckit-tasks` e `/speckit-implement` ya corrieron todos sobre esta constitucion. Queda
 pendiente (no bloqueante) una enmienda futura para que el Principio I reconozca la excepcion
 de fase MVP introducida por D9 — ver `memory/progress.md`.
+
+---
+
+## Endpoint `POST /diagnosticar/<alerta_id>` sin autenticacion (D13)
+
+**Area que protege:** el servidor HTTP embebido (`src/api.py`) que expone el diagnostico
+bajo demanda, y cualquier decision de exponer el puerto `HTTP_PORT` (default 8000) mas alla
+de `localhost`.
+
+**Detalle:** el endpoint no valida ningun token/credencial. Quien tenga acceso de red al
+puerto puede disparar una llamada real a la API de Claude (costo pagado por Joelo) por cada
+alerta existente. En desarrollo local el `docker-compose.yml` mapea `8000:8000` en el host,
+asi que cualquier proceso en la misma maquina (o en la misma LAN si el firewall no lo
+bloquea) puede pegarle.
+
+**No romper:** no exponer este puerto a internet (port-forward del router, tunel publico,
+deploy en un servidor con IP publica) sin agregar autenticacion (token compartido en el
+header, o allowlist de IP) primero. Ver D13 en `memory/decisions.md` para el detalle
+completo de la decision que introdujo este endpoint.

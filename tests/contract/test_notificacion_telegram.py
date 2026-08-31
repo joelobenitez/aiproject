@@ -38,3 +38,14 @@ def test_formatear_mensaje_fallback_indica_diagnostico_no_disponible():
     assert "temperatura = 87.3 C (umbral: 75 C)" in mensaje
     assert "Diagnostico no disponible" in mensaje
     assert "Revisar manualmente" in mensaje
+
+
+def test_formatear_mensaje_crudo_referencia_el_diagnostico_bajo_demanda():
+    mensaje = telegram.formatear_mensaje_crudo(
+        "Motor M-01 | Linea A | Planta 1", "temperatura", 80.0, "C", 75, "ALERTA", 42
+    )
+
+    assert "[ALERTA] Motor M-01 | Linea A | Planta 1" in mensaje
+    assert "temperatura = 80.0 C (umbral: 75 C)" in mensaje
+    assert "alerta #42" in mensaje
+    assert "/diagnosticar/42" in mensaje

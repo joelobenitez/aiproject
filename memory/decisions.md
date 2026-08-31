@@ -341,3 +341,58 @@ decision nueva de arquitectura: solo formaliza en la constitucion algo que D9, `
 **Alcance:** no modifica los Principios II-V ni ninguna otra seccion de la constitucion. No
 habilita omitir la separacion de capas fuera del contexto MVP sin una decision equivalente
 registrada aca.
+
+---
+
+## D13 — Diagnostico de IA bajo demanda para severidad ALERTA (automatico solo en CRITICO)
+
+**Fecha:** 2026-08-31
+**Quien decidio:** Joelo + Claude Code
+
+**Decision:** el diagnostico automatico de Claude deja de dispararse en toda alerta. Ahora:
+- **CRITICO:** comportamiento sin cambios — diagnostico automatico + notificacion Telegram
+  con causa probable/urgencia/accion.
+- **ALERTA:** se manda un mensaje Telegram crudo (variable, valor, umbral, severidad, sin
+  IA) que referencia el id de la alerta. El diagnostico queda disponible bajo demanda via
+  `POST /diagnosticar/<alerta_id>` contra un servidor HTTP nuevo (`src/api.py`,
+  `http.server` de la libreria estandar, puerto `HTTP_PORT`, default 8000, corre en el
+  mismo proceso que la suscripcion MQTT via `loop_start()` en vez de `loop_forever()`).
+  Idempotente: si ya existe un diagnostico para esa alerta, se devuelve el guardado sin
+  volver a llamar a Claude ni a Telegram.
+
+**Por que:** reduce las llamadas a la API de Claude (costo real, pagado por Joelo) al
+subconjunto de alertas donde un humano decide que vale la pena, sin perder cobertura en el
+caso mas urgente (CRITICO sigue automatico). Investigacion de mercado (sesion 2026-08-31):
+la mayoria de las plataformas de AIOps 2026 (PagerDuty, Datadog, Rootly) invierten
+automatico-siempre porque su modelo de costo es flat-fee/enterprise; la excepcion relevante
+es Splunk, cuyo agente de troubleshooting corre "automatico o on demand segun la alerta" —
+el mismo modelo hibrido que adopta esta decision. El patron ChatOps (postear el evento
+crudo, dejar que el humano pregunte cuando lo necesita) valida la forma del mensaje crudo.
+
+**Opciones evaluadas (ver sesion 2026-08-31 para el detalle completo):**
+- **A. Boton inline en Telegram:** requiere resolver ya el receptor de Nivel 1 completo de
+  D2 (webhook/tunel o long-polling + allowlist). Se pospone: es el paso natural siguiente
+  si el modelo hibrido resulta util, pero no se paga ese costo de infraestructura todavia.
+- **B. Comando de texto en Telegram:** mismo costo de infraestructura que A, se descarta
+  por la misma razon.
+- **C. Endpoint HTTP (ELEGIDA):** no toca Telegram como canal de entrada — evita el receptor
+  de D2 Nivel 1 por ahora. El "on demand" se pide desde afuera (curl/Postman/futuro boton
+  en Grafana). Mas barato de validar la idea central antes de invertir en el receptor.
+- **D. Automatico solo para CRITICO (ELEGIDA, combinada con C):** aprovecha una distincion
+  de severidad que `src/deteccion/detector.py` ya tenia (NORMAL/ALERTA/CRITICO) pero que
+  hasta ahora no se usaba para esto.
+
+**Trade-off aceptado:** una alerta ALERTA que nadie pide diagnosticar queda sin diagnostico
+indefinidamente — a diferencia del comportamiento anterior (D9 original), donde siempre
+habia contexto de IA disponible. Aceptado porque el objetivo es ahorro de costo + control
+humano, no cobertura total.
+
+**Riesgo que deja abierto:** el endpoint `/diagnosticar/<id>` no tiene autenticacion —
+cualquiera con acceso de red al puerto 8000 puede disparar llamadas a Claude (costo real).
+Aceptable en desarrollo local (el puerto no sale de la red Docker salvo el mapeo expreso a
+localhost); revisar antes de exponerlo en produccion. Ver `memory/risks.md`.
+
+**Camino natural siguiente (no implementado aun):** opcion A (boton inline de Telegram)
+sobre el mismo `diagnosticar_bajo_demanda`, cuando se decida pagar el costo del receptor de
+D2 Nivel 1 — no se tira nada de lo hecho aca, `src/api.py` y `main.diagnosticar_bajo_demanda`
+se reusan tal cual.

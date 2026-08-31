@@ -1,5 +1,8 @@
 """Cliente Telegram Nivel 0 (D2): notificacion push via Bot API
 (contracts/notificacion-telegram.md).
+
+D13: para severidad ALERTA el diagnostico de IA es bajo demanda, no automatico — el mensaje
+crudo (`formatear_mensaje_crudo`) reemplaza al diagnostico en ese caso.
 """
 import logging
 import time
@@ -40,6 +43,17 @@ def formatear_mensaje_fallback(
         f"[{severidad}] {equipo_nombre}\n"
         f"Variable: {variable} = {valor} {unidad} (umbral: {umbral} {unidad})\n\n"
         f"Diagnostico no disponible (fallo temporal del servicio de IA). Revisar manualmente."
+    )
+
+
+def formatear_mensaje_crudo(
+    equipo_nombre: str, variable: str, valor: float, unidad: str, umbral: float, severidad: str, alerta_id: int
+) -> str:
+    return (
+        f"[{severidad}] {equipo_nombre}\n"
+        f"Variable: {variable} = {valor} {unidad} (umbral: {umbral} {unidad})\n\n"
+        f"Diagnostico de IA disponible bajo demanda para la alerta #{alerta_id} "
+        f"(POST /diagnosticar/{alerta_id})."
     )
 
 

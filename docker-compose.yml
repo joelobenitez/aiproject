@@ -39,6 +39,8 @@ services:
       # defecto de .env, pensado para correr src/main.py fuera de Docker)
       MQTT_HOST: broker
       INFLUX_URL: http://influxdb:8086
+    ports:
+      - "8000:8000"
     volumes:
       - ./data:/app/data
     networks:

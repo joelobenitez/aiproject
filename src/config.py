@@ -37,3 +37,5 @@ MQTT_PORT = int(os.environ.get("MQTT_PORT", "1883"))
 MQTT_TOPIC_BASE = os.environ.get("MQTT_TOPIC_BASE", "demo/planta1/linea_a/motor_001")
 
 SQLITE_DB_PATH = os.environ.get("SQLITE_DB_PATH", str(_RAIZ / "data" / "aiproject.db"))
+
+HTTP_PORT = int(os.environ.get("HTTP_PORT", "8000"))

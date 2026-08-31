@@ -1,21 +1,34 @@
 # Progress — aiproject
 
-> **Ultima actualizacion:** 2026-08-30
+> **Ultima actualizacion:** 2026-08-31
 > **Donde estamos:** MVP del feature `001-diagnostico-motor-industrial` IMPLEMENTADO,
 > VALIDADO EN DOCKER REAL CON PIPELINE COMPLETO END-TO-END: MQTT → deteccion → **Claude
 > real** → **Telegram real** → **Grafana con anotaciones reales**, sin fallos. Los 5 items
-> pendientes de la sesion 2026-08-29 quedaron todos cerrados el 2026-08-30 (ver "Proximos
-> pasos" para el detalle de cada uno).
-> `/speckit-implement` corrido de punta a punta: 38/38 tareas de `tasks.md` completas.
+> pendientes de la sesion 2026-08-29 quedaron todos cerrados el 2026-08-30.
+> **2026-08-31 (sesion nueva, terminal distinta — `C:\Users\jbenitez\proyectos\aiproject`,
+> mismo repo/commit que la terminal de desarrollo original):** se valido que el repo corre
+> igual de bien en una maquina/terminal distinta (Docker Desktop instalado pero apagado, sin
+> `.env`, sin deps — todo se resolvio y quedo documentado). Se cargaron credenciales reales
+> de Telegram nuevas para esta terminal. Se implemento y valido **D13: diagnostico de IA bajo
+> demanda** — la IA ya no diagnostica automatico en severidad `ALERTA` (solo en `CRITICO`);
+> para `ALERTA` se manda un mensaje Telegram crudo y el diagnostico se pide via
+> `POST /diagnosticar/<alerta_id>` contra un servidor HTTP nuevo embebido en el servicio
+> (`src/api.py`, puerto 8000). Validado en vivo contra el stack Docker de esta terminal
+> (Alerta #3: mensaje crudo → pedido on-demand → diagnostico + notificacion → pedido
+> repetido devuelve cache sin re-llamar a Claude). 36/36 tests pytest en verde (31 + 5
+> nuevos). Ver D13 en `memory/decisions.md` y el riesgo nuevo en `memory/risks.md`
+> (endpoint sin autenticacion). **Pendiente: commitear estos cambios y actualizar el
+> commit/tests en la terminal de desarrollo original tambien.**
+> `/speckit-implement` corrido de punta a punta: 38/38 tareas de `tasks.md` completas (pre-
+> D13; D13 es posterior al MVP formal de Spec Kit, no paso por el loop `/speckit-*`).
 > Codigo en `src/` + `herramientas/emulador_motor.py` + `docker-compose.yml` +
-> provisioning de Grafana. 31 tests de pytest en verde. Ultimo commit `0559e0a` pusheado a
-> `main` en GitHub. El 2026-08-30 se cargaron $5 reales en `console.anthropic.com`, se probo
+> provisioning de Grafana. Ultimo commit pusheado a `main` en GitHub antes de esta sesion:
+> `b62b60e`. El 2026-08-30 se cargaron $5 reales en `console.anthropic.com`, se probo
 > el diagnostico real de Claude (encontramos y arreglamos un bug real de parseo), se
 > cargaron credenciales reales de Telegram (Alerta #16, 75.26C, diagnostico real + envio
 > real, ambos HTTP 200 OK) y se encontro/arreglo un bug real en las anotaciones del
-> dashboard de Grafana (ver "Pendientes sueltos" para el detalle de los 3). Ademas se
-> reconcilio `spec.md` con el alcance real (D9) y se enmendo la constitucion a v1.1.0 (D12).
-> Metodo de memoria multisesion instalado (D6).
+> dashboard de Grafana. Ademas se reconcilio `spec.md` con el alcance real (D9) y se
+> enmendo la constitucion a v1.1.0 (D12). Metodo de memoria multisesion instalado (D6).
 
 ---
 
@@ -34,7 +47,7 @@
 | Stack objetivo del MVP | REDEFINIDO (D9) — broker MQTT + InfluxDB + Grafana + 1 servicio Python (colapsa Node-RED+n8n+Agent), SQLite en vez de MySQL, Email/Web Report postergados |
 | Stack objetivo a escala industrial | Roadmap anotado (D11) — vuelve a separar detector/diagnostico, RUT956 real, EMQX cluster, Postgres/MySQL, dimensionamiento de hardware |
 | Contratos de datos (MQTT payload, schema InfluxDB, schema DB, contrato interno del servicio Python) | HECHO — `specs/001-diagnostico-motor-industrial/contracts/` + `data-model.md`, implementados en `src/` |
-| Codigo del MVP (`src/`, `herramientas/emulador_motor.py`) | IMPLEMENTADO Y COMMITEADO — pipeline completo ingesta→deteccion→diagnostico→notificacion→Grafana, 31 tests pytest en verde |
+| Codigo del MVP (`src/`, `herramientas/emulador_motor.py`) | IMPLEMENTADO — pipeline completo ingesta→deteccion→diagnostico→notificacion→Grafana. Con D13 (2026-08-31, sin commitear aun): diagnostico automatico solo en CRITICO + endpoint HTTP `/diagnosticar/<id>` para ALERTA. 36 tests pytest en verde |
 | Docker Compose real (version MVP simplificada) | VALIDADO — `docker compose up -d --build` corrido con exito (broker+influxdb+servicio+grafana), pipeline probado end-to-end con el emulador real (ver "Pendientes sueltos") |
 | Memoria multi-sesion (este metodo) | INSTALADO — 2026-08-29 |
 
@@ -48,9 +61,16 @@ Ninguno bloqueante. Ver "Pendientes sueltos" abajo para lo que falta cerrar.
 
 ## Proximos pasos
 
-**Foco de la proxima sesion (default):** todos los items de la lista de la sesion
-2026-08-29/30 estan cerrados. No hay nada bloqueante pendiente. Ver "Pendientes sueltos"
-para items de fondo sin apuro (WSL2, secretos de produccion, D5).
+**Foco de la proxima sesion (default):** commitear y pushear los cambios de D13 (diagnostico
+bajo demanda) hechos el 2026-08-31 en la terminal `C:\Users\jbenitez\proyectos\aiproject` —
+working tree con cambios sin commitear al cierre de esta sesion. Camino natural despues de
+eso (no urgente, ver D13): opcion A del analisis — boton inline de Telegram sobre el mismo
+`diagnosticar_bajo_demanda`, si se decide pagar el costo de infraestructura del receptor de
+D2 Nivel 1 (webhook/tunel o long-polling).
+
+Los items de la lista de la sesion 2026-08-29/30 (distinta) siguen cerrados. Ver "Pendientes
+sueltos" para items de fondo sin apuro (WSL2, secretos de produccion, D5, autenticacion del
+endpoint `/diagnosticar`).
 
 Historial de esta lista (todos cerrados 2026-08-30):
 1. ~~Commitear el fix de `src/diagnostico/parser.py`~~ — HECHO (`545b34a`, pusheado).

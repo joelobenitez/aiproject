@@ -134,6 +134,18 @@ def crear_alerta(equipo_id: str, variable: str, valor: float, severidad: str, ti
         return cursor.lastrowid
 
 
+def obtener_alerta(alerta_id: int) -> dict | None:
+    with conexion() as conn:
+        fila = conn.execute("SELECT * FROM alerta WHERE id = ?", (alerta_id,)).fetchone()
+        return dict(fila) if fila else None
+
+
+def obtener_diagnostico(alerta_id: int) -> dict | None:
+    with conexion() as conn:
+        fila = conn.execute("SELECT * FROM diagnostico WHERE alerta_id = ?", (alerta_id,)).fetchone()
+        return dict(fila) if fila else None
+
+
 def obtener_alertas_previas(equipo_id: str, limite: int = 5) -> list[dict]:
     with conexion() as conn:
         filas = conn.execute(
