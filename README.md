@@ -1,9 +1,10 @@
 # aiproject — Monitoreo de Motor Industrial con Diagnostico Inteligente via Claude
 
 MVP del feature `001-diagnostico-motor-industrial` (cerrado — spec/plan jubilados en
-`obs/specs/001-diagnostico-motor-industrial/`, D14). Feature en curso:
-`specs/002-grafana-llm-diagnostico/` (plugin LLM de Grafana + panel de diagnostico). Ver
-`memory/decisions.md` para el historial completo de decisiones.
+`obs/specs/001-diagnostico-motor-industrial/`, D14) mas el feature
+`002-grafana-llm-diagnostico` (cerrado — spec/plan jubilados en
+`obs/specs/002-grafana-llm-diagnostico/`, D16). Ver `memory/decisions.md` para el historial
+completo de decisiones.
 
 ## Entorno de desarrollo
 
@@ -48,8 +49,8 @@ servicio `grafana` (`GF_INSTALL_PLUGINS`, version pinneada; `GF_FEATURE_TOGGLES_
 dashgpt`) — no son variables de `.env`, estan fijadas directamente en el compose. Reusa
 `ANTHROPIC_API_KEY` de `.env` via `grafana/provisioning/plugins/apps.yaml`. Detalle completo
 (schema verificado a mano, bug del modelo default del plugin y su fix) en
-`specs/002-grafana-llm-diagnostico/research.md`; escenarios de validacion en
-`specs/002-grafana-llm-diagnostico/quickstart.md`.
+`obs/specs/002-grafana-llm-diagnostico/research.md`; escenarios de validacion en
+`obs/specs/002-grafana-llm-diagnostico/quickstart.md`.
 
 ## Tests
 

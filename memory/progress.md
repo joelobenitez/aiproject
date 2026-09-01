@@ -94,9 +94,16 @@
 > corrigieron 3 referencias obsoletas a `specs/001-...` que nunca se habian actualizado
 > tras D14 (deberian apuntar a `obs/specs/001-...`). **Feature 002 completo: 13/13 tareas,
 > suite de tests 39/39 en verde.** Stack real (broker+influxdb+grafana+servicio) sigue
-> arriba con el codigo nuevo. Falta: commitear/pushear (sin hacer todavia, pendiente de
-> confirmar con Joelo) y el click manual del boton "Auto generate" en el navegador (unico
-> punto de `quickstart.md` no verificado por API, bajo riesgo).
+> arriba con el codigo nuevo. Commiteado y pusheado (`a456901`) a pedido de Joelo.
+> Conversacion posterior confirmo que no se agrega mas superficie de IA en Grafana ("no le
+> veo mucho uso al plugin... sigamos con lo que ya tenemos") — el uso real de la conexion
+> Grafana-Claude quedo evaluado como agotado (cualquier funcion nativa adicional seria
+> generica, mas debil que el diagnostico que ya muestra el panel de Historia 2). **Jubilado
+> `specs/002-grafana-llm-diagnostico/` a `obs/specs/002-grafana-llm-diagnostico/` (D16),
+> mismo criterio que D14** — el ciclo SDD esta cerrado. Falta: commitear/pushear esta
+> jubilacion (pendiente de confirmar con Joelo) y el click manual del boton "Auto generate"
+> en el navegador (unico punto de `quickstart.md` no verificado por API, bajo riesgo, sin
+> urgencia).
 
 ---
 

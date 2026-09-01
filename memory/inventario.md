@@ -43,13 +43,6 @@ La herramienta (`.specify/` + comandos) queda activa e instalada — no se jubil
 artefactos generados para el feature 001 (spec/plan/tasks/etc.) sí se jubilaron, ver
 tabla "Jubilados (obs/)" (D14).
 
-## Spec Kit — feature 002 (en progreso)
-
-| Artefacto | Ubicacion | Contenido | Estado |
-|---|---|---|---|
-| Spec del feature 002 | `specs/002-grafana-llm-diagnostico/spec.md` | Plugin `grafana-llm-app` (dashgpt) + panel de diagnostico IA en el dashboard, reusando D13, sin panel custom (D15) | Draft — escrito a mano siguiendo `spec-template.md` (el comando `/speckit-specify` no corrio, ver nota operativa en D15 y `memory/risks.md`). |
-| Plan del feature 002 | `specs/002-grafana-llm-diagnostico/plan.md`, `research.md`, `data-model.md`, `quickstart.md`, `contracts/diagnostico-influxdb.md` | Contexto tecnico, Constitution Check (todo PASS), archivos concretos a tocar, verificacion pendiente de campos exactos del provisioning Anthropic, schema del measurement `diagnosticos` nuevo en InfluxDB | Hecho a mano (mismo motivo que el spec) — Fase 0+1 completas. |
-| Tasks del feature 002 | `specs/002-grafana-llm-diagnostico/tasks.md` | 13 tareas en 2 historias independientes (US1 plugin, US2 panel) + Polish | 13/13 completas (2026-09-01), validadas contra el stack real. Ver `memory/progress.md` para el resumen. |
 
 ## Jubilados (obs/)
 
@@ -59,6 +52,7 @@ tabla "Jubilados (obs/)" (D14).
 | Overview de Gemini | `obs/GEMINI.md` | Overview de la fase de investigacion temprana, generado por Gemini | Obsoleto — ya estaba marcado como "referencia historica" en el CLAUDE.md anterior. Se conserva. |
 | CLAUDE.md pre-metodo | `obs/CLAUDE_pre-metodo.md` | Version de `CLAUDE.md` previa a adoptar el metodo de memoria multisesion (incluia estado y proximos pasos mezclados con las reglas estables) | Obsoleto — contenido decantado al nuevo `CLAUDE.md` + `memory/decisions.md` + `memory/historico.md`. Se conserva. |
 | Spec Kit — artefactos del feature 001 | `obs/specs/001-diagnostico-motor-industrial/` (spec.md, plan.md, tasks.md, research.md, quickstart.md, data-model.md, contracts/, checklists/) | Ciclo SDD completo y cerrado del MVP (38/38 tareas). Incluye los contratos de datos originales (MQTT payload, schema InfluxDB, contrato interno del servicio) | Jubilado 2026-09-01 (D14) — registro historico constructivo. `src/` es la fuente de verdad viva del codigo/contratos implementados; este archivo se consulta solo si hace falta el detalle de diseno original o el razonamiento del spec/plan de esa etapa. No se migro contenido a otro lado para no duplicar. |
+| Spec Kit — artefactos del feature 002 | `obs/specs/002-grafana-llm-diagnostico/` (spec.md, plan.md, tasks.md, research.md, data-model.md, quickstart.md, contracts/) | Ciclo SDD completo y cerrado del plugin LLM de Grafana + panel de diagnostico (13/13 tareas, D15). Incluye la investigacion real del schema del plugin y el bug del modelo default encontrado/arreglado | Jubilado 2026-09-01 (D16) — mismo criterio que D14. `src/`, `grafana/provisioning/` y `docker-compose.yml` son la fuente de verdad viva. No se agrega mas superficie de IA en Grafana (confirmado con Joelo tras el cierre del feature). |
 
 ## Infraestructura
 

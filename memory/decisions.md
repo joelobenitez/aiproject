@@ -486,3 +486,28 @@ uso en cambio `.specify/scripts/powershell/create-new-feature.ps1` directamente 
 sin red) para scaffoldear `specs/002-.../spec.md` desde `.specify/templates/spec-template.md`,
 y se escribio el contenido a mano siguiendo esa plantilla. Si el hang se repite en una
 proxima sesion, no perder tiempo reintentando — ir directo a este camino alternativo.
+
+---
+
+## D16 — Jubilar los artefactos del feature 002 (specs/) a obs/, mismo criterio que D14
+
+**Fecha:** 2026-09-01
+**Quien decidio:** Joelo + Claude Code
+
+**Decision:** se mueve `specs/002-grafana-llm-diagnostico/` (spec.md, plan.md, tasks.md,
+research.md, data-model.md, quickstart.md, contracts/) a
+`obs/specs/002-grafana-llm-diagnostico/` via `git mv`, sin editar contenido. Mismo criterio
+que D14: el ciclo SDD del feature 002 esta cerrado (13/13 tareas, validado contra el stack
+real, commiteado y pusheado — commit `a456901`).
+
+**Por que:** identico razonamiento a D14 — dejarlo en `specs/` en la raiz lo deja en la ruta
+que una sesion futura recorre por default como si fuera trabajo activo/pendiente, cuando en
+realidad describe un feature ya implementado y verificado. `src/`, `grafana/provisioning/` y
+`docker-compose.yml` son la fuente de verdad viva de lo implementado.
+
+**Alcance:** organizacion documental, no de producto. No reabre ni reinterpreta D15 (la
+decision de scope del feature sigue vigente tal cual) — la conversacion posterior a D15
+(2026-09-01, "no le veo mucho uso al plugin... sigamos con lo que ya tenemos, no agreguemos
+mas IA en Grafana") confirmo que no se agrega mas superficie de IA en Grafana mas alla de lo
+ya implementado; esta jubilacion es consecuencia de que el trabajo esta terminado, no una
+decision nueva de alcance.
