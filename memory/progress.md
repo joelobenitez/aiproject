@@ -1,6 +1,6 @@
 # Progress — aiproject
 
-> **Ultima actualizacion:** 2026-08-31
+> **Ultima actualizacion:** 2026-09-01
 > **Donde estamos:** MVP del feature `001-diagnostico-motor-industrial` IMPLEMENTADO,
 > VALIDADO EN DOCKER REAL CON PIPELINE COMPLETO END-TO-END: MQTT → deteccion → **Claude
 > real** → **Telegram real** → **Grafana con anotaciones reales**, sin fallos. Los 5 items
@@ -34,6 +34,15 @@
 > real, ambos HTTP 200 OK) y se encontro/arreglo un bug real en las anotaciones del
 > dashboard de Grafana. Ademas se reconcilio `spec.md` con el alcance real (D9) y se
 > enmendo la constitucion a v1.1.0 (D12). Metodo de memoria multisesion instalado (D6).
+> **2026-09-01 (sesion de organizacion de archivos/documentacion):** se jubilo
+> `specs/001-diagnostico-motor-industrial/` a `obs/specs/001-diagnostico-motor-industrial/`
+> (spec, plan, tasks, research, quickstart, data-model, contracts, checklists) por estar
+> cerrado (38/38 tareas) y para que no se lea como contexto activo — registrado como **D14**
+> en `memory/decisions.md`. La herramienta Spec Kit (`.specify/`, comandos `/speckit-*`)
+> **no** se jubilo: sigue instalada y activa para spec-kitear una etapa futura. No se migro
+> contenido a ningun otro lado (a pedido explicito de Joelo, para no duplicar los contratos
+> de datos entre `src/` y la documentacion) — `src/` sigue siendo la unica fuente de verdad
+> viva. Commiteado (`b17ae3e`) y pusheado a `main` en GitHub.
 
 ---
 
@@ -67,8 +76,9 @@ Ninguno bloqueante. Ver "Pendientes sueltos" abajo para lo que falta cerrar.
 ## Proximos pasos
 
 **Foco de la proxima sesion (default):** hacer `git pull` en la terminal de desarrollo
-original (carpeta `joelo`) para traer el commit `103d3da` (D13) — no bloqueante, pero hay
-que hacerlo antes de seguir trabajando desde esa terminal para no divergir.
+original (carpeta `joelo`) para traer los commits `103d3da` (D13) y `b17ae3e` (D14, jubila
+`specs/001-...` a `obs/`) — no bloqueante, pero hay que hacerlo antes de seguir trabajando
+desde esa terminal para no divergir.
 
 **Anotado como trabajo futuro (no urgente, sin fecha):** escalar la infraestructura de
 Telegram a **Nivel 1** (ver D2 en `memory/decisions.md` y el "camino natural siguiente" de
