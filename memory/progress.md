@@ -100,10 +100,9 @@
 > Grafana-Claude quedo evaluado como agotado (cualquier funcion nativa adicional seria
 > generica, mas debil que el diagnostico que ya muestra el panel de Historia 2). **Jubilado
 > `specs/002-grafana-llm-diagnostico/` a `obs/specs/002-grafana-llm-diagnostico/` (D16),
-> mismo criterio que D14** — el ciclo SDD esta cerrado. Falta: commitear/pushear esta
-> jubilacion (pendiente de confirmar con Joelo) y el click manual del boton "Auto generate"
-> en el navegador (unico punto de `quickstart.md` no verificado por API, bajo riesgo, sin
-> urgencia).
+> mismo criterio que D14** — el ciclo SDD esta cerrado. Commiteado y pusheado (`b406366`).
+> Unico pendiente sin urgencia: el click manual del boton "Auto generate" en el navegador
+> (unico punto de `quickstart.md` no verificado por API, bajo riesgo).
 
 ---
 
@@ -136,10 +135,20 @@ Ninguno bloqueante. Ver "Pendientes sueltos" abajo para lo que falta cerrar.
 
 ## Proximos pasos
 
-**Foco de la proxima sesion (default):** hacer `git pull` en la terminal de desarrollo
-original (carpeta `joelo`) para traer los commits `103d3da` (D13) y `b17ae3e` (D14, jubila
-`specs/001-...` a `obs/`) — no bloqueante, pero hay que hacerlo antes de seguir trabajando
-desde esa terminal para no divergir.
+**Foco de la proxima sesion (2026-09-02, a pedido explicito de Joelo):** avanzar con la
+integracion del **Teltonika RUT956** (D11 roadmap — reemplazar el emulador Python por el
+gateway real hablando Modbus RTU/RS485 con sensores reales, publicando por su cliente MQTT
+nativo con la misma estructura de topicos). Todavia no arranco: la sesion de 2026-09-01
+solo alcanzo a preguntar el estado del hardware antes de que Joelo pidiera cerrar por
+tiempo — **falta confirmar en que estado esta el RUT956** (en mano y en red / en mano sin
+conectar / todavia no comprado) para saber si el trabajo es de laboratorio real o de
+planificacion/spec primero. Ver `CLAUDE.md` (seccion Hardware Confirmado) y D11 en
+`memory/decisions.md` para el contexto tecnico ya definido.
+
+**Tambien pendiente, sin urgencia:** hacer `git pull` en la terminal de desarrollo original
+(carpeta `joelo`) para traer los commits de esta sesion y las anteriores (`103d3da`,
+`b17ae3e`, `59fe114`, `a456901`, `b406366`) — no bloqueante, pero hay que hacerlo antes de
+seguir trabajando desde esa terminal para no divergir.
 
 **Anotado como trabajo futuro (no urgente, sin fecha):** escalar la infraestructura de
 Telegram a **Nivel 1** (ver D2 en `memory/decisions.md` y el "camino natural siguiente" de
