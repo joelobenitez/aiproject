@@ -396,3 +396,43 @@ localhost); revisar antes de exponerlo en produccion. Ver `memory/risks.md`.
 sobre el mismo `diagnosticar_bajo_demanda`, cuando se decida pagar el costo del receptor de
 D2 Nivel 1 — no se tira nada de lo hecho aca, `src/api.py` y `main.diagnosticar_bajo_demanda`
 se reusan tal cual.
+
+---
+
+## D14 — Jubilar los artefactos del feature 001 (specs/) a obs/, manteniendo Spec Kit activo
+
+**Fecha:** 2026-09-01
+**Quien decidio:** Joelo + Claude Code
+
+**Decision:** se mueve `specs/001-diagnostico-motor-industrial/` (spec.md, plan.md, tasks.md,
+research.md, quickstart.md, data-model.md, contracts/, checklists/) a
+`obs/specs/001-diagnostico-motor-industrial/` via `git mv`, sin editar contenido. La
+herramienta Spec Kit en si (`.specify/` — scripts, templates, `constitution.md` v1.1.0, y los
+comandos `/speckit-*`) **no se jubila**: queda instalada y activa, disponible para spec-kitear
+una etapa futura del proyecto (ej. el roadmap de escalamiento D11, o Telegram Nivel 1) sin
+reinstalar nada.
+
+**Por que:** el ciclo SDD del feature 001 esta cerrado (38/38 tareas de `tasks.md`
+completadas, MVP validado en Docker real con Claude/Telegram/Grafana reales). Mantenerlo en
+`specs/` en la raiz del repo lo dejaba en la ruta que un asistente recorre por default como si
+fuera contexto activo, cuando en realidad describe una version anterior/parcial del sistema
+(reconciliada parcialmente por D9 pero de todos modos superada por el codigo real en `src/`).
+El riesgo concreto que esto evita: que una sesion futura lea `spec.md`/`plan.md` como si
+describieran el estado actual y arme respuestas con informacion desactualizada o en conflicto
+con `src/` y `memory/decisions.md`.
+
+**Por que no se jubila `.specify/` tambien:** no es contenido que pueda quedar stale — son
+plantillas y scripts reutilizables, no una foto de una etapa. Retirarlo hubiera cerrado la
+puerta a usar Spec Kit de nuevo sin necesidad; Spec Kit esta pensado justamente para acumular
+una carpeta `specs/NNN-slug/` por feature, asi que un futuro `/speckit-specify` simplemente
+crearia `specs/002-.../` al lado de la carpeta ahora vacia, sin fricción.
+
+**Por que no se migro contenido a `definicion/` u otro lado:** para evitar la duplicacion de
+info que Joelo senalo como riesgo explicito (contratos de datos viviendo en dos lugares que
+podrian divergir). `src/` es la unica fuente de verdad viva de lo implementado; los contratos
+originales en `obs/specs/001-diagnostico-motor-industrial/contracts/` quedan solo como
+registro historico consultable — ver referencia en `memory/inventario.md`.
+
+**Alcance:** esta decision es de organizacion documental, no de arquitectura ni de producto.
+No revierte ni reinterpreta D5, D9 ni D12 — solo cambia donde vive el registro del ciclo SDD
+ya cerrado del feature 001.

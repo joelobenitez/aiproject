@@ -46,12 +46,12 @@
 | Repo git local (esta carpeta) | CREADO — `git init -b main` + primer commit (35 archivos). Remote `origin` configurado |
 | Push a GitHub | HECHO — `2badaab` en `main` en `github.com/joelobenitez/aiproject` (incluye `fe521e6` anterior), local y remoto identicos |
 | Spec Kit — constitucion | HECHO — `.specify/memory/constitution.md` v1.0.0, 5 principios basados en D1-D7 |
-| Spec Kit — spec del feature | HECHO — `specs/001-diagnostico-motor-industrial/spec.md`, checklist en verde, sin clarificaciones pendientes |
+| Spec Kit — spec del feature | HECHO — jubilado (D14) en `obs/specs/001-diagnostico-motor-industrial/spec.md`, checklist en verde, sin clarificaciones pendientes |
 | Spec Kit — plan/tasks | HECHO — `plan.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`, `tasks.md` (38 tareas) |
 | Spec Kit — implement | COMPLETO — 38/38 tareas de `tasks.md`, incluyendo T037 (validacion en Docker real) |
 | Stack objetivo del MVP | REDEFINIDO (D9) — broker MQTT + InfluxDB + Grafana + 1 servicio Python (colapsa Node-RED+n8n+Agent), SQLite en vez de MySQL, Email/Web Report postergados |
 | Stack objetivo a escala industrial | Roadmap anotado (D11) — vuelve a separar detector/diagnostico, RUT956 real, EMQX cluster, Postgres/MySQL, dimensionamiento de hardware |
-| Contratos de datos (MQTT payload, schema InfluxDB, schema DB, contrato interno del servicio Python) | HECHO — `specs/001-diagnostico-motor-industrial/contracts/` + `data-model.md`, implementados en `src/` |
+| Contratos de datos (MQTT payload, schema InfluxDB, schema DB, contrato interno del servicio Python) | Implementados en `src/` (fuente de verdad viva). Diseno original jubilado (D14) en `obs/specs/001-diagnostico-motor-industrial/contracts/` + `data-model.md` |
 | Codigo del MVP (`src/`, `herramientas/emulador_motor.py`) | IMPLEMENTADO Y COMMITEADO — pipeline completo ingesta→deteccion→diagnostico→notificacion→Grafana. Con D13 (2026-08-31, commit `103d3da`): diagnostico automatico solo en CRITICO + endpoint HTTP `/diagnosticar/<id>` para ALERTA. 36 tests pytest en verde |
 | Docker Compose real (version MVP simplificada) | VALIDADO — `docker compose up -d --build` corrido con exito (broker+influxdb+servicio+grafana), pipeline probado end-to-end con el emulador real (ver "Pendientes sueltos") |
 | Memoria multi-sesion (este metodo) | INSTALADO — 2026-08-29 |
@@ -95,7 +95,7 @@ Historial de esta lista (todos cerrados 2026-08-30):
    por Joelo (linea roja en el timestamp exacto de la Alerta #16).
 4. ~~Reconciliar `spec.md` con el alcance real implementado~~ — HECHO: nota post-
    implementacion agregada + Historia 3, mitad de Historia 2 (email), FR-007, FR-008 y
-   SC-006 marcados "Diferido (D9)" en `specs/001-diagnostico-motor-industrial/spec.md`.
+   SC-006 marcados "Diferido (D9)" en `spec.md` (ruta actual: `obs/specs/001-diagnostico-motor-industrial/spec.md`, jubilado por D14).
 5. ~~Enmienda de `/speckit-constitution`~~ — HECHO: constitucion 1.0.0 -> 1.1.0, Principio I
    ahora reconoce la excepcion de fase MVP de D9. Registrado como D12 en
    `memory/decisions.md`.

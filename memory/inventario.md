@@ -34,10 +34,14 @@ Mapa de artefactos: ubicacion, contenido en una linea, estado.
 
 | Artefacto | Ubicacion | Contenido | Estado |
 |---|---|---|---|
-| Constitution | `.specify/memory/constitution.md` | Template vacio de Spec Kit, sin completar | Pendiente — ver risks.md |
+| Constitution | `.specify/memory/constitution.md` | v1.1.0 — 5 principios, Principio I con excepcion de fase MVP (D12) | Usado para el feature 001 (cerrado). Queda activo, disponible para features futuras |
 | Templates | `.specify/templates/*.md` | spec-template, plan-template, tasks-template, checklist-template, constitution-template | Sin tocar (default de Spec Kit) |
 | Scripts | `.specify/scripts/powershell/*.ps1` | Scripts de soporte del workflow Spec Kit (PowerShell, acorde al entorno Windows) | Sin tocar (default de Spec Kit) |
-| Comandos | `.claude/skills/speckit-*/SKILL.md` | 9 comandos `/speckit-constitution`, `/speckit-specify`, `/speckit-clarify`, `/speckit-plan`, `/speckit-checklist`, `/speckit-tasks`, `/speckit-analyze`, `/speckit-implement`, `/speckit-converge`, `/speckit-taskstoissues` | Instalados Session 05, no usados todavia |
+| Comandos | `.claude/skills/speckit-*/SKILL.md` | 9 comandos `/speckit-constitution`, `/speckit-specify`, `/speckit-clarify`, `/speckit-plan`, `/speckit-checklist`, `/speckit-tasks`, `/speckit-analyze`, `/speckit-implement`, `/speckit-converge`, `/speckit-taskstoissues` | Instalados Session 05. Usados para el loop completo del feature 001 (`/speckit-implement` corrido de punta a punta) |
+
+La herramienta (`.specify/` + comandos) queda activa e instalada — no se jubila. Los
+artefactos generados para el feature 001 (spec/plan/tasks/etc.) sí se jubilaron, ver
+tabla "Jubilados (obs/)" (D14).
 
 ## Jubilados (obs/)
 
@@ -46,6 +50,7 @@ Mapa de artefactos: ubicacion, contenido en una linea, estado.
 | Checkpoint viejo | `obs/CHECKPOINT.md` | Mecanismo de cierre/reanudacion ad-hoc, ultimo estado registrado: cierre Session 05 (2026-08-10) | Obsoleto — reemplazado por `memory/progress.md` + `memory/decisions.md`. Se conserva como registro historico. |
 | Overview de Gemini | `obs/GEMINI.md` | Overview de la fase de investigacion temprana, generado por Gemini | Obsoleto — ya estaba marcado como "referencia historica" en el CLAUDE.md anterior. Se conserva. |
 | CLAUDE.md pre-metodo | `obs/CLAUDE_pre-metodo.md` | Version de `CLAUDE.md` previa a adoptar el metodo de memoria multisesion (incluia estado y proximos pasos mezclados con las reglas estables) | Obsoleto — contenido decantado al nuevo `CLAUDE.md` + `memory/decisions.md` + `memory/historico.md`. Se conserva. |
+| Spec Kit — artefactos del feature 001 | `obs/specs/001-diagnostico-motor-industrial/` (spec.md, plan.md, tasks.md, research.md, quickstart.md, data-model.md, contracts/, checklists/) | Ciclo SDD completo y cerrado del MVP (38/38 tareas). Incluye los contratos de datos originales (MQTT payload, schema InfluxDB, contrato interno del servicio) | Jubilado 2026-09-01 (D14) — registro historico constructivo. `src/` es la fuente de verdad viva del codigo/contratos implementados; este archivo se consulta solo si hace falta el detalle de diseno original o el razonamiento del spec/plan de esa etapa. No se migro contenido a otro lado para no duplicar. |
 
 ## Infraestructura
 
