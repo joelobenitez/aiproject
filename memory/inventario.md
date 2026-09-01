@@ -43,6 +43,14 @@ La herramienta (`.specify/` + comandos) queda activa e instalada — no se jubil
 artefactos generados para el feature 001 (spec/plan/tasks/etc.) sí se jubilaron, ver
 tabla "Jubilados (obs/)" (D14).
 
+## Spec Kit — feature 002 (en progreso)
+
+| Artefacto | Ubicacion | Contenido | Estado |
+|---|---|---|---|
+| Spec del feature 002 | `specs/002-grafana-llm-diagnostico/spec.md` | Plugin `grafana-llm-app` (dashgpt) + panel de diagnostico IA en el dashboard, reusando D13, sin panel custom (D15) | Draft — escrito a mano siguiendo `spec-template.md` (el comando `/speckit-specify` no corrio, ver nota operativa en D15 y `memory/risks.md`). |
+| Plan del feature 002 | `specs/002-grafana-llm-diagnostico/plan.md`, `research.md`, `data-model.md`, `quickstart.md`, `contracts/diagnostico-influxdb.md` | Contexto tecnico, Constitution Check (todo PASS), archivos concretos a tocar, verificacion pendiente de campos exactos del provisioning Anthropic, schema del measurement `diagnosticos` nuevo en InfluxDB | Hecho a mano (mismo motivo que el spec) — Fase 0+1 completas. |
+| Tasks del feature 002 | `specs/002-grafana-llm-diagnostico/tasks.md` | 13 tareas en 2 historias independientes (US1 plugin, US2 panel) + Polish | 13/13 completas (2026-09-01), validadas contra el stack real. Ver `memory/progress.md` para el resumen. |
+
 ## Jubilados (obs/)
 
 | Artefacto | Ubicacion | Contenido | Estado |

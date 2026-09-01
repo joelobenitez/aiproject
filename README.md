@@ -1,8 +1,9 @@
 # aiproject — Monitoreo de Motor Industrial con Diagnostico Inteligente via Claude
 
-MVP del feature `001-diagnostico-motor-industrial`. Ver `specs/001-diagnostico-motor-industrial/`
-para la spec, el plan y las decisiones de diseno completas, y `memory/decisions.md` para el
-historial de decisiones (D1-D11).
+MVP del feature `001-diagnostico-motor-industrial` (cerrado — spec/plan jubilados en
+`obs/specs/001-diagnostico-motor-industrial/`, D14). Feature en curso:
+`specs/002-grafana-llm-diagnostico/` (plugin LLM de Grafana + panel de diagnostico). Ver
+`memory/decisions.md` para el historial completo de decisiones.
 
 ## Entorno de desarrollo
 
@@ -37,8 +38,18 @@ python src/main.py &
 python herramientas/emulador_motor.py
 ```
 
-Para validar de punta a punta los 6 escenarios, ver
-`specs/001-diagnostico-motor-industrial/quickstart.md`.
+Para validar de punta a punta los 6 escenarios del MVP, ver
+`obs/specs/001-diagnostico-motor-industrial/quickstart.md`.
+
+### Plugin LLM de Grafana (feature 002)
+
+`docker-compose.yml` instala y provisiona el plugin oficial `grafana-llm-app` en el
+servicio `grafana` (`GF_INSTALL_PLUGINS`, version pinneada; `GF_FEATURE_TOGGLES_ENABLE:
+dashgpt`) — no son variables de `.env`, estan fijadas directamente en el compose. Reusa
+`ANTHROPIC_API_KEY` de `.env` via `grafana/provisioning/plugins/apps.yaml`. Detalle completo
+(schema verificado a mano, bug del modelo default del plugin y su fix) en
+`specs/002-grafana-llm-diagnostico/research.md`; escenarios de validacion en
+`specs/002-grafana-llm-diagnostico/quickstart.md`.
 
 ## Tests
 
@@ -48,5 +59,5 @@ pytest
 
 ## Estructura
 
-Ver `specs/001-diagnostico-motor-industrial/plan.md` (seccion "Estructura del Proyecto") para
-el detalle de cada modulo bajo `src/`.
+Ver `obs/specs/001-diagnostico-motor-industrial/plan.md` (seccion "Estructura del Proyecto")
+para el detalle de cada modulo bajo `src/`.

@@ -56,6 +56,11 @@ services:
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       INFLUX_URL: http://influxdb:8086
+      # Plugin LLM oficial (feature 002) — version pinneada, no ':latest' (research.md T001)
+      GF_INSTALL_PLUGINS: "grafana-llm-app 1.0.8"
+      # dashgpt ya viene true por default en 11.3.0 (research.md T001); explicito igual
+      # como red de seguridad ante un cambio de default en una version futura.
+      GF_FEATURE_TOGGLES_ENABLE: dashgpt
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:

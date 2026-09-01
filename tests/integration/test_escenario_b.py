@@ -23,6 +23,7 @@ _DIAGNOSTICO_OK = {
 def test_escenario_b_genera_alertas_de_sobrecarga(entorno_aislado, monkeypatch):
     monkeypatch.setattr(influx_repo, "escribir_lectura", lambda *a, **k: None)
     monkeypatch.setattr(influx_repo, "escribir_evento_alerta", lambda *a, **k: None)
+    monkeypatch.setattr(influx_repo, "escribir_diagnostico", lambda *a, **k: None)
     monkeypatch.setattr(influx_repo, "tendencia_24h", lambda *a, **k: "incremento sostenido")
     monkeypatch.setattr(parser, "diagnosticar", lambda entrada: _DIAGNOSTICO_OK)
 

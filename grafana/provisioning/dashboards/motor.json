@@ -48,6 +48,70 @@
           "query": "from(bucket: \"lecturas_motor\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn: (r) => r._measurement == \"lecturas_motor\") |> filter(fn: (r) => r.equipo_id == \"motor_001\") |> filter(fn: (r) => r.variable == \"vibracion\") |> filter(fn: (r) => r._field == \"valor\")"
         }
       ]
+    },
+    {
+      "id": 4,
+      "title": "Diagnostico IA (ultimo disponible)",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
+      "datasource": { "type": "influxdb", "uid": "aiproject-influxdb" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "left", "cellOptions": { "type": "auto", "wrapText": true } }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "fallo" },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "true": { "text": "Diagnostico no disponible (fallo del nucleo cognitivo)", "color": "red" },
+                      "false": { "text": "OK", "color": "green" }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "equipo_id": true, "result": true, "table": true, "_start": true, "_stop": true, "_measurement": true },
+            "indexByName": {
+              "_time": 0,
+              "fallo": 1,
+              "urgencia": 2,
+              "causa_probable": 3,
+              "accion_recomendada": 4,
+              "razonamiento": 5,
+              "confianza": 6,
+              "alerta_id": 7
+            },
+            "renameByName": {
+              "_time": "Generado",
+              "causa_probable": "Causa probable",
+              "razonamiento": "Razonamiento",
+              "urgencia": "Urgencia",
+              "accion_recomendada": "Accion recomendada",
+              "confianza": "Confianza",
+              "alerta_id": "Alerta #"
+            }
+          }
+        }
+      ],
+      "targets": [
+        {
+          "refId": "A",
+          "query": "from(bucket: \"lecturas_motor\") |> range(start: -30d) |> filter(fn: (r) => r._measurement == \"diagnosticos\") |> filter(fn: (r) => r.equipo_id == \"motor_001\") |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\") |> sort(columns: [\"_time\"], desc: true) |> limit(n: 1)"
+        }
+      ]
     }
   ],
   "annotations": {

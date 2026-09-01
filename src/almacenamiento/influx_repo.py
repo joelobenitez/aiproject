@@ -1,5 +1,6 @@
 """Acceso a InfluxDB: measurement `lecturas_motor` (data-model.md)."""
 import logging
+from datetime import datetime, timezone
 
 from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
@@ -50,6 +51,34 @@ def escribir_evento_alerta(equipo_id: str, variable: str, severidad: str, valor:
         write_api.write(bucket=config.INFLUX_BUCKET, record=punto)
     except Exception:
         logger.exception("Fallo al escribir el evento de alerta en InfluxDB (no bloquea el pipeline)")
+
+
+def escribir_diagnostico(
+    equipo_id: str, alerta_id: int, resultado: dict, fallo: bool, timestamp: str | None = None
+) -> None:
+    """Espejo liviano de un Diagnostico en InfluxDB, solo para mostrarlo en el dashboard de
+    Grafana (Historia 2, feature 002, contracts/diagnostico-influxdb.md). Best-effort: un
+    fallo aca no debe afectar el pipeline de diagnostico/notificacion, que ya persistio el
+    Diagnostico en SQLite."""
+    if timestamp is None:
+        timestamp = datetime.now(timezone.utc).isoformat()
+    try:
+        punto = (
+            Point("diagnosticos")
+            .tag("equipo_id", equipo_id)
+            .field("alerta_id", alerta_id)
+            .field("causa_probable", resultado.get("causa_probable") or "")
+            .field("razonamiento", resultado.get("razonamiento") or "")
+            .field("urgencia", resultado.get("urgencia") or "")
+            .field("accion_recomendada", resultado.get("accion_recomendada") or "")
+            .field("confianza", str(resultado.get("confianza") or ""))
+            .field("fallo", bool(fallo))
+            .time(timestamp)
+        )
+        write_api = _obtener_cliente().write_api(write_options=SYNCHRONOUS)
+        write_api.write(bucket=config.INFLUX_BUCKET, record=punto)
+    except Exception:
+        logger.exception("Fallo al escribir el evento de diagnostico en InfluxDB (no bloquea el pipeline)")
 
 
 def tendencia_24h(equipo_id: str, variable: str) -> str:

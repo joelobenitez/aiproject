@@ -42,7 +42,61 @@
 > **no** se jubilo: sigue instalada y activa para spec-kitear una etapa futura. No se migro
 > contenido a ningun otro lado (a pedido explicito de Joelo, para no duplicar los contratos
 > de datos entre `src/` y la documentacion) — `src/` sigue siendo la unica fuente de verdad
-> viva. Commiteado (`b17ae3e`) y pusheado a `main` en GitHub.
+> viva. Commiteado (`b17ae3e`) y pusheado a `main` en GitHub. **Misma sesion, continuacion:**
+> se investigo (docs oficiales + GitHub + un issue real) integrar el plugin LLM de Grafana
+> (`grafana-llm-app`) a partir de investigacion traida de otra sesion. Se descarto el caso de
+> uso original (panel custom con resumen de datos en vivo) por falta de referencia mantenida
+> y por tension con el Principio III de la constitucion — se registro como **D15**. Se armo
+> `specs/002-grafana-llm-diagnostico/spec.md` (Draft, escrito a mano porque `specify init`
+> se colgo al reinstalar los comandos `/speckit-*` en esta terminal nueva — ver nota
+> operativa en D15 y el riesgo nuevo en `memory/risks.md`). Se siguio con el equivalente de
+> `/speckit-plan` (tambien a mano, mismo motivo): `plan.md` (Constitution Check, todo PASS),
+> `research.md` (resuelve como instalar/provisionar el plugin, deja marcado que los nombres
+> de campo exactos del provisioning Anthropic se verifican empiricamente recien en
+> implementacion — no hay ejemplo publico confiable), `data-model.md` y
+> `contracts/diagnostico-influxdb.md` (measurement nuevo `diagnosticos` en InfluxDB, separado
+> de `alertas`), y `quickstart.md` (6 escenarios de validacion manual). Se siguio con el equivalente de
+> `/speckit-tasks` (tambien a mano): `tasks.md` con 13 tareas en 2 historias independientes
+> entre si (US1 = instalar/provisionar el plugin, 4 tareas; US2 = panel de diagnostico, 5
+> tareas; Polish, 4 tareas) — 0/13 hechas todavia. **Continuacion, implementacion
+> (T001-T004 de 13, Historia 1 completa):** T001 verifico a mano (contenedor Grafana
+> descartable + inspeccion del bundle instalado) el schema real de provisioning Anthropic
+> para `grafana-llm-app v1.0.8` — `jsonData.provider`, `jsonData.disabled` (distinto del
+> `disabled` de nivel `apps[]`, no documentado asi en ninguna fuente oficial),
+> `jsonData.anthropic.url`, `secureJsonData.anthropicKey`. T002/T003 aplicados a
+> `docker-compose.yml` y `grafana/provisioning/plugins/apps.yaml` (nuevo). T004 encontro y
+> arreglo un bug real: el plugin v1.0.8 trae hardcodeado un modelo Anthropic descontinuado
+> (`claude-4-sonnet-20250514`, 404) — se piso con `jsonData.models.mapping` (Haiku 4.5 /
+> Sonnet 5, los mismos modelos que ya usa `src/`), verificado funcionando contra la API real
+> (`ANTHROPIC_API_KEY` real, `/api/plugins/grafana-llm-app/health` → `ok:true`). Registrado
+> en `memory/risks.md`. **Nota operativa:** al validar con `docker compose config | grep`, se
+> expusieron en el transcript de esta sesion `ANTHROPIC_API_KEY`/`INFLUX_TOKEN`/
+> `INFLUX_ADMIN_PASSWORD` en texto plano (error del propio comando, no un leak a un tercero)
+> — **recomendado rotar `ANTHROPIC_API_KEY`** cuando Joelo pueda. Queda pendiente el click
+> real del boton "Auto generate" en la UI (extension de Chrome no conectada en esta sesion,
+> bajo riesgo — la mecanica ya se probo por API). **Continuacion, Historia 2 completa
+> (T005-T009):** `escribir_diagnostico()` nueva en `influx_repo.py` (measurement
+> `diagnosticos`), integrada en `main.py`, panel "Diagnostico IA" (tabla) agregado a
+> `motor.json`, test unitario nuevo (3 tests). Validado de punta a punta contra el stack
+> real (broker+servicio+influxdb+grafana, reconstruido con `--build` para tomar el codigo
+> nuevo): Alerta #6 CRITICO con diagnostico automatico visible en InfluxDB con el query
+> exacto del panel, Alerta #7 ALERTA con diagnostico on-demand via D13
+> (`POST /diagnosticar/7`) tambien visible, estado vacio sin error para un equipo
+> inexistente. **Bug de test-isolation encontrado y arreglado**: 4 tests de integracion
+> existentes (`test_escenario_a/b/c.py`, `test_diagnostico_bajo_demanda.py`) no conocian la
+> funcion nueva y escribieron un diagnostico de prueba real a la InfluxDB real durante la
+> corrida de la suite completa — arreglado agregando el mismo mock que ya tenian para
+> `escribir_evento_alerta`; los 2 puntos de contaminacion se borraron a mano. Suite completa
+> 39/39 en verde. **Polish (T010-T013) completo:** confirmado por diff/grep que no hay
+> codigo TypeScript ni llamadas nuevas a Anthropic fuera de `src/` (T010); confirmado que
+> `diagnosticar_bajo_demanda`/endpoint D13 no cambiaron (T011); riesgos ya documentados
+> (T012); `README.md` actualizado con una seccion sobre el plugin LLM (T013) — de paso se
+> corrigieron 3 referencias obsoletas a `specs/001-...` que nunca se habian actualizado
+> tras D14 (deberian apuntar a `obs/specs/001-...`). **Feature 002 completo: 13/13 tareas,
+> suite de tests 39/39 en verde.** Stack real (broker+influxdb+grafana+servicio) sigue
+> arriba con el codigo nuevo. Falta: commitear/pushear (sin hacer todavia, pendiente de
+> confirmar con Joelo) y el click manual del boton "Auto generate" en el navegador (unico
+> punto de `quickstart.md` no verificado por API, bajo riesgo).
 
 ---
 

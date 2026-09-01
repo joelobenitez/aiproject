@@ -436,3 +436,53 @@ registro historico consultable — ver referencia en `memory/inventario.md`.
 **Alcance:** esta decision es de organizacion documental, no de arquitectura ni de producto.
 No revierte ni reinterpreta D5, D9 ni D12 — solo cambia donde vive el registro del ciclo SDD
 ya cerrado del feature 001.
+
+---
+
+## D15 — Alcance del feature 002 (plugin LLM de Grafana): minimo + reusa D13, sin panel custom
+
+**Fecha:** 2026-09-01
+**Quien decidio:** Joelo + Claude Code
+
+**Decision:** el feature `002-grafana-llm-diagnostico` (ver `specs/002-grafana-llm-diagnostico/spec.md`)
+instala y provisiona el plugin oficial `grafana-llm-app` (proveedor Anthropic, feature
+toggle `dashgpt` nativo de Grafana) y agrega un panel al dashboard `motor-001-mvp` que
+muestra el ultimo diagnostico de IA que `src/` ya genera (D13) — sin agregar ningun llamado
+nuevo a la API de Claude desde Grafana. Se descarta explicitamente la alternativa de un
+panel custom (TypeScript + React + `@grafana/llm`) que le pregunte a Claude en vivo por el
+estado del motor a partir de las ultimas lecturas — esa era la idea original de la
+investigacion que dio pie a este feature.
+
+**Por que:**
+- Investigacion propia (verificada contra docs oficiales de Grafana Labs, GitHub del
+  plugin y un issue real, sesion 2026-09-01) confirmo dos cosas que la investigacion previa
+  no tenia: (a) el plugin no trae de fabrica un panel de "resumen de datos" — es un proxy
+  backend + libreria frontend, hay que escribir un panel custom para eso; (b) el unico
+  ejemplo publico de Grafana Labs que mostraba ese patron (`grafana-llmexamples-app`) esta
+  archivado desde 2026-06-05, ya no se mantiene — mala base para construir sobre eso.
+- El Principio III de la constitucion ("Un Cerebro, Muchos Consumidores", D3) exige que el
+  Claude Agent sea el unico consumidor de la API de Anthropic para diagnostico. Un panel
+  custom en Grafana con su propio prompt seria un segundo camino cognitivo en paralelo a
+  `src/` — exactamente lo que D3/Principio III buscan evitar.
+- `src/` ya genera el diagnostico real (D13, automatico en CRITICO + on-demand en ALERTA) y
+  ya lo persiste (SQLite). Lo unico que falta para verlo en Grafana es espejarlo a InfluxDB
+  (mismo patron ya usado para las anotaciones de alerta, `escribir_evento_alerta`) — cero
+  llamadas nuevas a Claude, cero desarrollo frontend.
+- Se conserva igual la Parte 1 (instalar+provisionar el plugin) porque es de bajo riesgo,
+  gratis en OSS, y el boton nativo "Auto generate" (`dashgpt`) alcanza para demostrar que
+  Claude esta conectado dentro de Grafana sin escribir codigo propio.
+
+**Alcance:** decision de scope de un feature en desarrollo, registrada antes de
+`/speckit-plan`. Si en el futuro se decide construir igual el panel custom con datos en
+vivo, requiere una decision nueva y explicita que reconozca y acepte la tension con el
+Principio III — no es continuacion natural de este feature.
+
+**Nota operativa (no es la decision, es contexto de la sesion):** `.claude/skills/` esta en
+`.gitignore` (correcto, D5-adyacente) y esta era la primera vez que se trabajaba este repo
+desde esta terminal — hubo que reinstalar los comandos `/speckit-*` con
+`specify init --here --integration claude --force`. Ese comando se colgo dos veces (con y
+sin sandbox de red) en el paso de descarga de templates, sin resolverse en la sesion. Se
+uso en cambio `.specify/scripts/powershell/create-new-feature.ps1` directamente (100% local,
+sin red) para scaffoldear `specs/002-.../spec.md` desde `.specify/templates/spec-template.md`,
+y se escribio el contenido a mano siguiendo esa plantilla. Si el hang se repite en una
+proxima sesion, no perder tiempo reintentando — ir directo a este camino alternativo.

@@ -37,6 +37,7 @@ def test_alerta_no_diagnostica_automaticamente(entorno_aislado, monkeypatch):
 
 def test_critico_diagnostica_automaticamente(entorno_aislado, monkeypatch):
     monkeypatch.setattr(influx_repo, "escribir_evento_alerta", lambda *a, **k: None)
+    monkeypatch.setattr(influx_repo, "escribir_diagnostico", lambda *a, **k: None)
     monkeypatch.setattr(influx_repo, "tendencia_24h", lambda *a, **k: "estable")
     llamadas = []
     monkeypatch.setattr(parser, "diagnosticar", lambda entrada: llamadas.append(entrada) or _DIAGNOSTICO_OK)
@@ -49,6 +50,7 @@ def test_critico_diagnostica_automaticamente(entorno_aislado, monkeypatch):
 
 def test_diagnostico_bajo_demanda_diagnostica_una_sola_vez(entorno_aislado, monkeypatch):
     monkeypatch.setattr(influx_repo, "escribir_evento_alerta", lambda *a, **k: None)
+    monkeypatch.setattr(influx_repo, "escribir_diagnostico", lambda *a, **k: None)
     monkeypatch.setattr(influx_repo, "tendencia_24h", lambda *a, **k: "estable")
     llamadas = []
     monkeypatch.setattr(parser, "diagnosticar", lambda entrada: llamadas.append(entrada) or _DIAGNOSTICO_OK)

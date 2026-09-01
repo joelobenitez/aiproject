@@ -57,6 +57,7 @@ def _diagnosticar_y_notificar(
     resultado = parser.diagnosticar(entrada)
     fallo = resultado.get("fallo", False)
     sqlite_repo.crear_diagnostico(alerta_id, resultado, fallo=fallo)
+    influx_repo.escribir_diagnostico(equipo_id, alerta_id, resultado, fallo)
 
     if fallo:
         logger.warning("Diagnostico no disponible para alerta #%s (fallo del nucleo cognitivo)", alerta_id)

@@ -146,3 +146,62 @@ bloquea) puede pegarle.
 deploy en un servidor con IP publica) sin agregar autenticacion (token compartido en el
 header, o allowlist de IP) primero. Ver D13 en `memory/decisions.md` para el detalle
 completo de la decision que introdujo este endpoint.
+
+---
+
+## `ANTHROPIC_API_KEY` materializada en dos lugares (feature 002, D15)
+
+**Area que protege:** el provisioning del plugin `grafana-llm-app`
+(`grafana/provisioning/plugins/apps.yaml`, feature `002-grafana-llm-diagnostico`).
+
+**Detalle:** el plugin de Grafana necesita la misma `ANTHROPIC_API_KEY` que ya usa `src/`.
+Se reutiliza via sustitucion de variable de entorno en el YAML de provisioning (mismo
+mecanismo que `influxdb.yml` ya usa para `INFLUX_TOKEN`), pero Grafana la cifra y la guarda
+en su propio secret store interno — el valor queda materializado en tiempo de ejecucion en
+dos procesos distintos (`src/`, `grafana`) en vez de uno solo.
+
+**No romper:** aceptado mientras ambos procesos sigan dentro del mismo perimetro de
+confianza (`docker-compose.yml` unico, red Docker local, sin exponer Grafana mas alla de
+`localhost:3000`). Si se expone Grafana fuera de ese perimetro (deploy real, acceso
+remoto), revisar esta superficie junto con la del endpoint `/diagnosticar/<id>` de arriba —
+mismo tipo de decision, no independiente. Ver `research.md` del feature 002 para el detalle
+completo.
+
+---
+
+## `specify init` se cuelga al reinstalar los comandos `/speckit-*` en una terminal nueva
+
+**Area que protege:** cualquier sesion que necesite `.claude/skills/speckit-*/` (esta en
+`.gitignore`, no viaja con el repo — hay que reinstalarlo por terminal/maquina).
+
+**Detalle:** `uvx --from git+https://github.com/github/spec-kit.git specify init --here
+--integration claude --force` se colgo dos veces (con y sin sandbox de red deshabilitado)
+justo despues de imprimir el panel "Specify Project Setup", sin avanzar en 17+ minutos, sin
+error visible. La causa exacta no se diagnostico (no parece ser alcance de red — `curl`
+directo a `api.github.com`/`github.com` respondio rapido durante el mismo cuelgue). Detalle
+completo en D15 (`memory/decisions.md`).
+
+**No romper (o mejor, no perder tiempo de nuevo):** si esto se repite, no reintentar en
+loop.
+
+---
+
+## `grafana-llm-app` v1.0.8 trae el modelo default de Anthropic descontinuado (feature 002)
+
+**Area que protege:** cualquier reinstalacion o upgrade de version de `grafana-llm-app`
+(`GF_INSTALL_PLUGINS` en `docker-compose.yml`, hoy pinneado a `1.0.8`).
+
+**Detalle:** el plugin v1.0.8 trae hardcodeado `"claude-4-sonnet-20250514"` como modelo
+default para Anthropic (Base y Large) — la API real de Anthropic ya no lo reconoce (404).
+Se piso con `jsonData.models.mapping` en `apps.yaml` (`base: claude-haiku-4-5-20251001`,
+`large: claude-sonnet-5`), verificado funcionando (2026-09-01) contra la API real. Detalle
+completo en `specs/002-grafana-llm-diagnostico/research.md`.
+
+**No romper:** si se sube la version pinneada de `grafana-llm-app` en el futuro, volver a
+correr `GET /api/plugins/grafana-llm-app/health` (con `curl -u admin:<password>`) antes de
+asumir que sigue funcionando — una version nueva puede arreglar el default (el override
+queda redundante, no rompe nada dejarlo) o cambiarlo a otro ID igual de roto. El rodeo que funciono: `.specify/scripts/powershell/create-new-feature.ps1` /
+`setup-plan.ps1` / `setup-tasks.ps1` son 100% locales (no bajan nada de red) y alcanzan para
+scaffoldear `specs/NNN-.../{spec,plan,tasks}.md` desde `.specify/templates/`; el contenido
+se completa a mano siguiendo esa plantilla, sin necesidad del comando `/speckit-*`
+reinstalado.

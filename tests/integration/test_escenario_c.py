@@ -28,6 +28,7 @@ _DIAGNOSTICO_OK = {
 def test_escenario_c_genera_solo_alertas_de_vibracion(entorno_aislado, monkeypatch):
     monkeypatch.setattr(influx_repo, "escribir_lectura", lambda *a, **k: None)
     monkeypatch.setattr(influx_repo, "escribir_evento_alerta", lambda *a, **k: None)
+    monkeypatch.setattr(influx_repo, "escribir_diagnostico", lambda *a, **k: None)
     monkeypatch.setattr(influx_repo, "tendencia_24h", lambda *a, **k: "incremento progresivo")
     monkeypatch.setattr(parser, "diagnosticar", lambda entrada: _DIAGNOSTICO_OK)
 
