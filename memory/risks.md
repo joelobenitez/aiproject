@@ -205,3 +205,39 @@ queda redundante, no rompe nada dejarlo) o cambiarlo a otro ID igual de roto. El
 scaffoldear `specs/NNN-.../{spec,plan,tasks}.md` desde `.specify/templates/`; el contenido
 se completa a mano siguiendo esa plantilla, sin necesidad del comando `/speckit-*`
 reinstalado.
+
+---
+
+## `docker compose up -d` no recrea contenedores viejos tras un `git pull` — corren con codigo/config desactualizada sin ningun error visible
+
+**Area que protege:** cualquier sesion que haga `git pull` (o cualquier cambio a
+`docker-compose.yml`/`src/`) con el stack Docker ya levantado desde antes.
+
+**Detalle:** confirmado dos veces en la misma sesion (2026-09-01, terminal `joelo`) despues
+de traer commits de `a456901`/D15 con `git pull`:
+- **Grafana:** el contenedor `aiproject-grafana` (creado 2 dias antes del pull, sin
+  recrearse) no tenia `GF_INSTALL_PLUGINS` en su entorno (`docker inspect` lo confirmo vacio)
+  a pesar de que el `docker-compose.yml` en disco ya lo declaraba desde D15 — quedaba en
+  `Exited (1)` con `plugin not installed: "grafana-llm-app"`.
+- **servicio:** el contenedor `aiproject-servicio` (mismo caso, sin rebuild) seguia
+  corriendo la imagen construida ANTES de D13 y del feature 002/Historia 2 — sin la funcion
+  `escribir_diagnostico` (el panel "Diagnostico IA" quedaba vacio sin ningun error) y sin la
+  logica de D13 que limita el diagnostico automatico a severidad `CRITICO` (diagnosticaba
+  automatico en toda alerta, incluida `ALERTA`, comportamiento viejo). El contenedor estaba
+  "Up" y sano — nada indicaba que corria codigo viejo salvo comparar el comportamiento real
+  contra lo que el codigo en disco dice que deberia pasar.
+
+**Por que pasa:** `docker compose up -d` (sin `--build` ni `--force-recreate`) solo recrea un
+servicio si detecta que su seccion en `docker-compose.yml` cambio respecto de lo que uso para
+crear el contenedor existente — pero no reconstruye la imagen para tomar cambios de codigo
+fuente (`COPY src/ ...` en el `Dockerfile`) si la imagen ya existe y el `docker-compose.yml`
+no cambio en si mismo. Un contenedor creado antes de un cambio de codigo puede seguir "Up"
+indefinidamente sirviendo la version vieja.
+
+**No romper:** despues de cualquier `git pull` (o cualquier edicion local a `src/` o
+`docker-compose.yml`), antes de asumir que el stack corre el codigo actual, correr
+`docker compose up -d --build` (reconstruye imagenes y recrea los contenedores que cambiaron)
+en vez de un `up -d` simple. Si hay dudas sobre un contenedor puntual, comparar codigo
+adentro (`docker compose exec -T <servicio> grep -n "<algo del codigo actual>"
+/app/<archivo>`, con `MSYS_NO_PATHCONV=1` delante si se corre desde Git Bash en Windows para
+que no traduzca la ruta `/app/...`) contra el archivo real en disco.

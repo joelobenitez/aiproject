@@ -103,6 +103,49 @@
 > mismo criterio que D14** — el ciclo SDD esta cerrado. Commiteado y pusheado (`b406366`).
 > Unico pendiente sin urgencia: el click manual del boton "Auto generate" en el navegador
 > (unico punto de `quickstart.md` no verificado por API, bajo riesgo).
+> **2026-09-01 (sesion nueva, terminal de desarrollo original — carpeta `joelo`):** se hizo
+> `git pull` en esta terminal para traer los commits que faltaban (`103d3da`, `b17ae3e`,
+> `59fe114`, `a456901`, `b406366`, `211c1dd`) — fast-forward limpio, sin conflictos, working
+> tree limpio antes y despues. Local y remoto quedaron identicos en `211c1dd`. Se arranco
+> con el foco anotado en la sesion anterior: integracion del **Teltonika RUT956** (D11). Se
+> guio a Joelo para acceder a la interfaz web del gateway por Ethernet (`http://192.168.1.1`,
+> DHCP nativo del RUT956 en su puerto LAN) — **Joelo no pudo acceder** (probo conectado por
+> Ethernet). No se llego a diagnosticar la causa especifica (timeout vs. rechazo vs. sin IP
+> DHCP): Joelo corto el intento de diagnostico paso a paso para pasar a otra tarea. **El
+> trabajo de integracion con el RUT956 sigue sin arrancar** — el primer bloqueante a resolver
+> en la proxima sesion es justamente el acceso a la interfaz de administracion del equipo.
+> **Misma sesion, continuacion:** Joelo reporto que Grafana no arrancaba en Docker. Causa
+> encontrada: el contenedor `aiproject-grafana` era viejo (creado 2 dias antes) y nunca se
+> habia recreado desde que el feature 002 (D15, commit `a456901`) agrego
+> `GF_INSTALL_PLUGINS: "grafana-llm-app 1.0.8"` al `docker-compose.yml` — `docker compose up
+> -d` sin `--force-recreate` no detecto el cambio de config y siguio corriendo el contenedor
+> viejo sin esa variable, asi que el provisioning fallaba con `app provisioning error: plugin
+> not installed: "grafana-llm-app"` (confirmado con `docker inspect`: el contenedor corriendo
+> no tenia `GF_INSTALL_PLUGINS` en su entorno). **Fix:** `docker compose up -d grafana
+> --force-recreate` — Grafana arranco limpio (plugin `grafana-llm-app` registrado, datasource
+> InfluxDB y dashboard `motor-001-mvp` provisionados, HTTP server en `:3000`). No fue un bug
+> de codigo, no requirio commit. **Leccion operativa:** despues de un `git pull` que toca
+> `docker-compose.yml`, correr `docker compose up -d --build` (o `--force-recreate` si no hay
+> rebuild de imagen) en vez de un `up -d` simple, para que los contenedores existentes tomen
+> la config nueva. **Misma sesion, continuacion:** con Grafana ya arriba y datos recientes
+> publicados (ver entrada siguiente), Joelo reporto que el panel "Diagnostico IA" (Historia 2
+> del feature 002) no mostraba nada. Mismo patron de causa que Grafana: el contenedor
+> `aiproject-servicio` tambien era viejo (sin recrearse desde antes de D13 y del feature 002)
+> — confirmado comparando el codigo real adentro del contenedor contra el archivo en disco
+> (`docker compose exec` + `grep`, con `MSYS_NO_PATHCONV=1` para evitar que Git Bash tradujera
+> la ruta `/app/...`): le faltaba por completo `escribir_diagnostico` (por eso el panel
+> quedaba vacio, sin ningun error) y tampoco tenia la logica de D13 (diagnosticaba automatico
+> en toda alerta, no solo en `CRITICO` — confirmado en vivo con la Alerta #17). **Fix:**
+> `docker compose up -d --build servicio` — reconstruyo la imagen con el codigo actual.
+> Validado en vivo con el emulador (escenario B, 25 ticks): Alerta #18 (`ALERTA`,
+> corriente=22.12A) correctamente NO disparo diagnostico automatico (D13 funcionando), y el
+> pedido posterior `POST /diagnosticar/18` genero el diagnostico real (causa probable +
+> urgencia ALTA + accion recomendada) y lo escribio en la measurement `diagnosticos` de
+> InfluxDB (confirmado por query directa a la API). Joelo confirmo visualmente que el panel
+> ya muestra la fila de la alerta #18 en Grafana. Registrado como riesgo nuevo (recurrente)
+> en `memory/risks.md`: "`docker compose up -d` no recrea contenedores viejos tras un `git
+> pull`" — aplica a cualquier sesion futura que pullee cambios de codigo/`docker-compose.yml`
+> con el stack ya levantado.
 
 ---
 
@@ -135,20 +178,18 @@ Ninguno bloqueante. Ver "Pendientes sueltos" abajo para lo que falta cerrar.
 
 ## Proximos pasos
 
-**Foco de la proxima sesion (2026-09-02, a pedido explicito de Joelo):** avanzar con la
-integracion del **Teltonika RUT956** (D11 roadmap — reemplazar el emulador Python por el
-gateway real hablando Modbus RTU/RS485 con sensores reales, publicando por su cliente MQTT
-nativo con la misma estructura de topicos). Todavia no arranco: la sesion de 2026-09-01
-solo alcanzo a preguntar el estado del hardware antes de que Joelo pidiera cerrar por
-tiempo — **falta confirmar en que estado esta el RUT956** (en mano y en red / en mano sin
-conectar / todavia no comprado) para saber si el trabajo es de laboratorio real o de
-planificacion/spec primero. Ver `CLAUDE.md` (seccion Hardware Confirmado) y D11 en
-`memory/decisions.md` para el contexto tecnico ya definido.
+**Foco de la proxima sesion:** seguir con la integracion del **Teltonika RUT956** (D11
+roadmap — reemplazar el emulador Python por el gateway real hablando Modbus RTU/RS485 con
+sensores reales, publicando por su cliente MQTT nativo con la misma estructura de topicos).
+Hardware confirmado en mano y conectado por Ethernet (2026-09-01), pero **bloqueado en el
+primer paso**: Joelo no pudo acceder a la interfaz web del equipo en `http://192.168.1.1`.
+Falta diagnosticar la causa (revisar a que puerto fisico del RUT956 esta conectado el cable
+— LAN vs. WAN —, si la PC tomo IP por DHCP en el rango `192.168.1.x`, y que error especifico
+tira el navegador: timeout, conexion rechazada, u otro). Ver `CLAUDE.md` (seccion Hardware
+Confirmado) y D11 en `memory/decisions.md` para el contexto tecnico ya definido.
 
-**Tambien pendiente, sin urgencia:** hacer `git pull` en la terminal de desarrollo original
-(carpeta `joelo`) para traer los commits de esta sesion y las anteriores (`103d3da`,
-`b17ae3e`, `59fe114`, `a456901`, `b406366`) — no bloqueante, pero hay que hacerlo antes de
-seguir trabajando desde esa terminal para no divergir.
+**Git:** todas las terminales (`joelo` y `jbenitez`) estan sincronizadas en `211c1dd` al
+cierre de esta sesion — nada pendiente de pull.
 
 **Anotado como trabajo futuro (no urgente, sin fecha):** escalar la infraestructura de
 Telegram a **Nivel 1** (ver D2 en `memory/decisions.md` y el "camino natural siguiente" de
