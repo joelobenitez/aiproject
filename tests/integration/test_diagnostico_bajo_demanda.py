@@ -11,11 +11,8 @@ from src.almacenamiento import influx_repo, sqlite_repo
 from src.diagnostico import parser
 
 _DIAGNOSTICO_OK = {
-    "causa_probable": "prueba",
-    "razonamiento": "prueba",
-    "urgencia": "MEDIA",
-    "accion_recomendada": "prueba",
-    "confianza": "ALTA",
+    "resumen_ejecutivo": "prueba",
+    "hechos_destacados": ["prueba"],
     "fallo": False,
 }
 
@@ -64,7 +61,8 @@ def test_diagnostico_bajo_demanda_diagnostica_una_sola_vez(entorno_aislado, monk
     assert len(llamadas) == 1
     assert resultado_1["cacheado"] is False
     assert resultado_2["cacheado"] is True
-    assert resultado_2["causa_probable"] == "prueba"
+    assert resultado_2["resumen_ejecutivo"] == "prueba"
+    assert resultado_2["hechos_destacados"] == ["prueba"]
 
 
 def test_diagnostico_bajo_demanda_alerta_inexistente(entorno_aislado):

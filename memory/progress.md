@@ -145,7 +145,37 @@
 > ya muestra la fila de la alerta #18 en Grafana. Registrado como riesgo nuevo (recurrente)
 > en `memory/risks.md`: "`docker compose up -d` no recrea contenedores viejos tras un `git
 > pull`" — aplica a cualquier sesion futura que pullee cambios de codigo/`docker-compose.yml`
-> con el stack ya levantado.
+> con el stack ya levantado. **Misma sesion, cambio de fondo (D17):** a pedido de Joelo (por
+> confianza/responsabilidad — no delegar juicio de causa/urgencia a la IA en un entorno
+> industrial real), el nucleo cognitivo dejo de diagnosticar (causa probable, razonamiento,
+> urgencia, accion recomendada, confianza) y paso a devolver un **resumen de hechos**:
+> `resumen_ejecutivo` (parrafo factual) + `hechos_destacados` (lista de 3-6 hechos puntuales),
+> sin ninguna interpretacion/juicio. Cambio planeado con `EnterPlanMode` (plan aprobado antes
+> de tocar codigo) e implementado end-to-end: `src/diagnostico/prompt.py` (system prompt +
+> 3 ejemplos few-shot reescritos), `parser.py` (claves esperadas), `sqlite_repo.py` (schema
+> de la tabla `diagnostico` cambiado de columnas), `influx_repo.py` (fields del measurement
+> `diagnosticos`), `main.py` (logging + decodificacion de `hechos_destacados` en el camino de
+> cache), `telegram.py` (mensaje reformateado sin "Causa probable"/"Urgencia"), panel
+> "Resumen de IA" en `grafana/provisioning/dashboards/motor.json`, y los 6 archivos de test
+> que referenciaban los campos viejos. **Los nombres tecnicos de plumbing se mantuvieron sin
+> cambios** (modulo `diagnostico`, endpoint `/diagnosticar/<id>`, tabla/measurement
+> `diagnostico(s)`) — decision explicita de Joelo para minimizar superficie de cambio. 39/39
+> tests en verde. Validado en vivo contra el stack Docker real (contenedor `servicio`
+> reconstruido, `data/aiproject.db` borrado y recreado con el schema nuevo porque `CREATE
+> TABLE IF NOT EXISTS` no migra columnas): pedido `POST /diagnosticar/<id>` genero un
+> resumen real puramente factual (sin causa/urgencia), confirmado el cache (pedido repetido
+> devuelve `cacheado: true` con `hechos_destacados` correctamente decodificado de vuelta a
+> lista), escrito en InfluxDB, y Joelo confirmo visualmente que tanto el mensaje de Telegram
+> como el panel "Resumen de IA" en Grafana se ven bien con el formato nuevo. Se registro como
+> **D17** en `memory/decisions.md`, y se actualizaron las dos menciones en `CLAUDE.md` que
+> describian el comportamiento viejo ("dice POR QUE y QUE HACER" / "diagnostico con causa
+> probable, urgencia y accion recomendada") para que el contrato del proyecto siga siendo
+> preciso. Deliberadamente NO se tocaron `definicion/arquitectura_sistema.md`,
+> `definicion/caso_de_uso_fase1.md` (docs pre-D9 ya divergentes en otros aspectos) ni
+> `investigacion/sistema_src_funcionamiento_detallado.md` (doc de estudio para NotebookLM
+> escrito el mismo dia — queda desactualizado en las secciones sobre el diagnostico viejo,
+> pendiente de regenerar si Joelo lo pide). **Sin commitear todavia** (a la espera de que
+> Joelo lo pida, ver `memory/decisions.md` D17 para el detalle completo).
 
 ---
 

@@ -7,13 +7,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.notificacion import telegram
 
 _RESULTADO_OK = {
-    "causa_probable": "degradacion del sistema de refrigeracion (filtro obstruido o "
-    "ventilador con caudal reducido)",
-    "razonamiento": "prueba",
-    "urgencia": "MEDIA",
-    "accion_recomendada": "Inspeccionar circuito de enfriamiento antes de las proximas 8 "
-    "horas de operacion.",
-    "confianza": "ALTA",
+    "resumen_ejecutivo": "La temperatura del motor alcanzo 87.3C, cruzando el umbral de "
+    "severidad ALERTA.",
+    "hechos_destacados": [
+        "Temperatura actual: 87.3C (severidad ALERTA)",
+        "Tendencia 24h temperatura: incremento sostenido",
+    ],
 }
 
 
@@ -24,9 +23,10 @@ def test_formatear_mensaje_exitoso_incluye_los_campos_del_contrato():
 
     assert "[ALERTA] Motor M-01 | Linea A | Planta 1" in mensaje
     assert "temperatura = 87.3 C (umbral: 75 C)" in mensaje
-    assert "Causa probable: degradacion del sistema de refrigeracion" in mensaje
-    assert "Urgencia: MEDIA | Confianza: ALTA" in mensaje
-    assert "Accion recomendada: Inspeccionar circuito de enfriamiento" in mensaje
+    assert "La temperatura del motor alcanzo 87.3C" in mensaje
+    assert "Hechos:" in mensaje
+    assert "- Temperatura actual: 87.3C (severidad ALERTA)" in mensaje
+    assert "- Tendencia 24h temperatura: incremento sostenido" in mensaje
 
 
 def test_formatear_mensaje_fallback_indica_diagnostico_no_disponible():
@@ -36,7 +36,7 @@ def test_formatear_mensaje_fallback_indica_diagnostico_no_disponible():
 
     assert "[ALERTA] Motor M-01 | Linea A | Planta 1" in mensaje
     assert "temperatura = 87.3 C (umbral: 75 C)" in mensaje
-    assert "Diagnostico no disponible" in mensaje
+    assert "Resumen no disponible" in mensaje
     assert "Revisar manualmente" in mensaje
 
 

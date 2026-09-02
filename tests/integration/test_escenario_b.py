@@ -11,11 +11,8 @@ from src.almacenamiento import influx_repo, sqlite_repo
 from src.diagnostico import parser
 
 _DIAGNOSTICO_OK = {
-    "causa_probable": "carga mecanica excesiva",
-    "razonamiento": "prueba",
-    "urgencia": "ALTA",
-    "accion_recomendada": "prueba",
-    "confianza": "MEDIA",
+    "resumen_ejecutivo": "prueba",
+    "hechos_destacados": ["prueba"],
     "fallo": False,
 }
 

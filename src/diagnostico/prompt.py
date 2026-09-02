@@ -6,21 +6,24 @@ caching de Claude (D8: modelo por defecto Haiku 4.5).
 """
 import json
 
-SYSTEM_PROMPT = """Sos el nucleo de diagnostico de un sistema de monitoreo industrial. Recibis el \
+SYSTEM_PROMPT = """Sos el modulo de resumen de un sistema de monitoreo industrial. Recibis el \
 contexto de una alerta de un motor industrial de induccion (lectura que cruzo un umbral, \
-tendencia de las ultimas 24 horas y alertas previas del mismo equipo) y devolves un \
-diagnostico en lenguaje natural, en espanol sin tildes.
+tendencia de las ultimas 24 horas y alertas previas del mismo equipo) y devolves un resumen \
+ejecutivo en lenguaje natural, en espanol sin tildes, que ordena los hechos disponibles.
 
 Reglas:
 - Respondes UNICAMENTE con un objeto JSON, sin texto adicional antes o despues.
-- El JSON tiene exactamente estas claves: causa_probable, razonamiento, urgencia, \
-accion_recomendada, confianza.
-- "urgencia" y "confianza" son uno de: ALTA, MEDIA, BAJA.
-- "razonamiento" explica por que se descartan otras causas posibles, no solo repite el \
-valor de la alerta.
-- "accion_recomendada" es una accion concreta y ejecutable, con un plazo cuando aplique.
-- Si el contexto no alcanza para un diagnostico confiable, decilo en "causa_probable" y \
-usa confianza BAJA en vez de inventar una causa especifica.
+- El JSON tiene exactamente estas claves: resumen_ejecutivo, hechos_destacados.
+- "resumen_ejecutivo" es un parrafo de 2 a 4 oraciones que ordena los hechos disponibles: \
+que variable cruzo el umbral y por cuanto, la tendencia de las tres variables en las \
+ultimas 24 horas, y si hay un patron en las alertas previas del equipo.
+- "hechos_destacados" es una lista de 3 a 6 strings cortos, cada uno un hecho puntual \
+tomado directo del contexto (valor y umbral, tendencia por variable, cantidad y variables \
+de alertas previas).
+- ESTRICTAMENTE PROHIBIDO: no incluyas causa probable, hipotesis sobre que esta fallando, \
+nivel de urgencia, nivel de confianza, ni ninguna accion recomendada. Tu trabajo es \
+organizar y presentar los hechos que ya estan en el contexto, no interpretarlos ni sacar \
+conclusiones. La interpretacion queda a cargo de un humano.
 """
 
 _EJEMPLOS = [
@@ -46,16 +49,17 @@ _EJEMPLOS = [
             "alertas_previas": [],
         },
         "salida": {
-            "causa_probable": "degradacion del sistema de refrigeracion (filtro obstruido "
-            "o ventilador con caudal reducido)",
-            "razonamiento": "El incremento de temperatura sin aumento de corriente descarta "
-            "sobrecarga mecanica. La curva gradual y sostenida es tipica de restriccion de "
-            "flujo de aire, no de falla electrica.",
-            "urgencia": "MEDIA",
-            "accion_recomendada": "Inspeccionar circuito de enfriamiento antes de las "
-            "proximas 8 horas de operacion. Revisar filtros y verificar caudal del "
-            "ventilador.",
-            "confianza": "ALTA",
+            "resumen_ejecutivo": "La temperatura del motor alcanzo 87.3C, cruzando el "
+            "umbral de severidad ALERTA, con un incremento de 12C en las ultimas 3 horas. "
+            "La corriente y la vibracion se mantuvieron estables en el mismo periodo. No "
+            "hay alertas previas registradas para este equipo.",
+            "hechos_destacados": [
+                "Temperatura actual: 87.3C (severidad ALERTA)",
+                "Tendencia 24h temperatura: incremento de 12C en las ultimas 3 horas",
+                "Tendencia 24h corriente: estable",
+                "Tendencia 24h vibracion: estable",
+                "Alertas previas registradas: ninguna",
+            ],
         },
     },
     {
@@ -80,16 +84,18 @@ _EJEMPLOS = [
             "alertas_previas": [],
         },
         "salida": {
-            "causa_probable": "carga mecanica excesiva, posible obstruccion o "
-            "desalineamiento del eje",
-            "razonamiento": "El aumento conjunto de corriente, temperatura y vibracion "
-            "descarta una causa puramente termica (como refrigeracion) y apunta a mayor "
-            "esfuerzo mecanico sostenido en el eje.",
-            "urgencia": "ALTA",
-            "accion_recomendada": "Detener el equipo en la proxima ventana disponible e "
-            "inspeccionar acople, rodamientos y alineamiento antes de reanudar operacion "
-            "continua.",
-            "confianza": "MEDIA",
+            "resumen_ejecutivo": "La corriente del motor alcanzo 23.5A, cruzando el umbral "
+            "de severidad ALERTA, con un incremento de 8A en las ultimas 4 horas. En el "
+            "mismo periodo la temperatura muestra un incremento moderado y sostenido, y la "
+            "vibracion un leve incremento. No hay alertas previas registradas para este "
+            "equipo.",
+            "hechos_destacados": [
+                "Corriente actual: 23.5A (severidad ALERTA)",
+                "Tendencia 24h corriente: incremento de 8A en las ultimas 4 horas",
+                "Tendencia 24h temperatura: incremento moderado y sostenido",
+                "Tendencia 24h vibracion: leve incremento",
+                "Alertas previas registradas: ninguna",
+            ],
         },
     },
     {
@@ -114,14 +120,18 @@ _EJEMPLOS = [
             "alertas_previas": [],
         },
         "salida": {
-            "causa_probable": "desgaste incipiente de rodamiento",
-            "razonamiento": "La vibracion avanzando progresivamente de forma aislada, con "
-            "temperatura y corriente casi estables, es el patron tipico de deterioro "
-            "mecanico localizado en rodamientos antes que de sobrecarga o falla termica.",
-            "urgencia": "MEDIA",
-            "accion_recomendada": "Planificar reemplazo preventivo del rodamiento en la "
-            "proxima parada programada; monitorear vibracion diariamente hasta entonces.",
-            "confianza": "ALTA",
+            "resumen_ejecutivo": "La vibracion del motor alcanzo 5.2mm/s, cruzando el "
+            "umbral de severidad ALERTA, con un incremento progresivo de zona aceptable a "
+            "zona de alerta en las ultimas 24 horas. En el mismo periodo la temperatura y "
+            "la corriente muestran solo un leve incremento. No hay alertas previas "
+            "registradas para este equipo.",
+            "hechos_destacados": [
+                "Vibracion actual: 5.2mm/s (severidad ALERTA)",
+                "Tendencia 24h vibracion: incremento progresivo de zona aceptable a alerta",
+                "Tendencia 24h temperatura: leve incremento",
+                "Tendencia 24h corriente: leve incremento",
+                "Alertas previas registradas: ninguna",
+            ],
         },
     },
 ]

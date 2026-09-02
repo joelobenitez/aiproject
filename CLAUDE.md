@@ -9,8 +9,11 @@ Sistema de automatizacion IoT industrial escalable con diagnostico inteligente v
 El objetivo: capturar datos de sensores industriales en campo, procesarlos en tiempo real,
 detectar anomalias y generar diagnosticos en lenguaje natural via Claude Agent.
 
-**Problema central a resolver:** la brecha entre "alerta de anomalia" y "diagnostico accionable".
-Los sistemas SCADA tradicionales dicen QUE algo esta mal. Nuestro sistema dice POR QUE y QUE HACER.
+**Problema central a resolver:** la brecha entre "alerta de anomalia" y "informacion accionable".
+Los sistemas SCADA tradicionales dicen QUE algo esta mal, sin mas contexto. Nuestro sistema
+ordena y presenta los hechos relevantes (valores, umbrales, tendencias, historial de alertas)
+en un resumen ejecutivo — la interpretacion (el POR QUE y el QUE HACER) queda a cargo de un
+operador humano (D17).
 
 ## Hardware Confirmado
 
@@ -102,8 +105,9 @@ Motor industrial simulado con 4 variables: temperatura (°C), corriente electric
 de carga mecanica), vibracion (mm/s) o presion de descarga (bar), horas de operacion
 acumuladas.
 
-El diferencial: cuando se detecta anomalia, Claude no solo alerta — genera un diagnostico
-contextual con causa probable, urgencia y accion recomendada.
+El diferencial: cuando se detecta anomalia, Claude no solo alerta — genera un resumen
+ejecutivo de los hechos relevantes (valores, umbrales, tendencias, historial), sin
+interpretar causa ni recomendar accion (D17).
 
 Ver `definicion/caso_de_uso_fase1.md` para la spec completa.
 

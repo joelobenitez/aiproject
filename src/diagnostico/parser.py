@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 _MAX_TOKENS = 1024
 _TIMEOUT_SEGUNDOS = 10.0
-_CLAVES_ESPERADAS = {"causa_probable", "razonamiento", "urgencia", "accion_recomendada", "confianza"}
+_CLAVES_ESPERADAS = {"resumen_ejecutivo", "hechos_destacados"}
 
 _client: anthropic.Anthropic | None = None
 

@@ -28,7 +28,7 @@ ENTRADA_VALIDA = {
     "alertas_previas": [],
 }
 
-_CLAVES_SALIDA = {"causa_probable", "razonamiento", "urgencia", "accion_recomendada", "confianza"}
+_CLAVES_SALIDA = {"resumen_ejecutivo", "hechos_destacados"}
 
 
 class _BloqueTexto:
@@ -52,10 +52,7 @@ def _cliente_falso(texto_respuesta=None, excepcion=None):
 
 
 def test_diagnosticar_devuelve_las_claves_del_contrato(monkeypatch):
-    salida_json = (
-        '{"causa_probable": "prueba", "razonamiento": "prueba", "urgencia": "MEDIA", '
-        '"accion_recomendada": "prueba", "confianza": "ALTA"}'
-    )
+    salida_json = '{"resumen_ejecutivo": "prueba", "hechos_destacados": ["prueba"]}'
     monkeypatch.setattr(parser, "_obtener_cliente", lambda: _cliente_falso(salida_json))
 
     resultado = parser.diagnosticar(ENTRADA_VALIDA)
@@ -73,7 +70,7 @@ def test_diagnosticar_marca_fallo_si_la_respuesta_no_es_json_valido(monkeypatch)
 
 
 def test_diagnosticar_marca_fallo_si_faltan_claves_en_la_respuesta(monkeypatch):
-    monkeypatch.setattr(parser, "_obtener_cliente", lambda: _cliente_falso('{"causa_probable": "prueba"}'))
+    monkeypatch.setattr(parser, "_obtener_cliente", lambda: _cliente_falso('{"resumen_ejecutivo": "prueba"}'))
 
     resultado = parser.diagnosticar(ENTRADA_VALIDA)
 

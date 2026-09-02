@@ -511,3 +511,50 @@ decision de scope del feature sigue vigente tal cual) — la conversacion poster
 mas IA en Grafana") confirmo que no se agrega mas superficie de IA en Grafana mas alla de lo
 ya implementado; esta jubilacion es consecuencia de que el trabajo esta terminado, no una
 decision nueva de alcance.
+
+---
+
+## D17 — El nucleo cognitivo deja de diagnosticar (causa/urgencia/accion) y pasa a resumir hechos
+
+**Fecha:** 2026-09-01
+**Quien decidio:** Joelo + Claude Code
+
+**Decision:** el contrato de `src/diagnostico/` cambia de 5 claves de interpretacion
+(`causa_probable`, `razonamiento`, `urgencia`, `accion_recomendada`, `confianza`) a 2 claves
+estrictamente factuales:
+- `resumen_ejecutivo`: parrafo de 2 a 4 oraciones que ordena los hechos disponibles (que
+  variable cruzo el umbral y por cuanto, tendencia de las 3 variables en 24h, patron de
+  alertas previas).
+- `hechos_destacados`: lista de 3 a 6 strings cortos, cada uno un hecho puntual tomado
+  directo del contexto que ya arma `src/diagnostico/context.py` (sin cambios en el contrato
+  de entrada).
+
+El system prompt (`src/diagnostico/prompt.py`) ahora prohibe explicitamente causa probable,
+hipotesis de falla, urgencia, confianza y accion recomendada — el rol de Claude es organizar
+y presentar hechos, no interpretarlos.
+
+**Por que:** confianza/responsabilidad. Joelo no quiere que la IA tome decisiones de causa o
+urgencia por su cuenta en un entorno industrial real — esa interpretacion (el "por que" y el
+"que hacer") queda a cargo de un operador humano. Este cambio reformula el diferencial
+central del proyecto descripto en `CLAUDE.md` (que antes decia que el sistema "dice POR QUE
+y QUE HACER") — se actualizo `CLAUDE.md` en las dos secciones que describian el
+comportamiento viejo para que el contrato del proyecto siga siendo preciso.
+
+**Alcance:**
+- Reemplaza el diagnostico anterior en TODOS los casos (CRITICO automatico y ALERTA bajo
+  demanda via D13) — no coexisten dos modos.
+- Los nombres tecnicos de plumbing se mantuvieron deliberadamente sin cambios (modulo
+  `src/diagnostico/`, funcion `diagnosticar_bajo_demanda`, endpoint
+  `POST /diagnosticar/<id>`, tabla SQLite `diagnostico`, measurement InfluxDB
+  `diagnosticos`) — decision explicita de Joelo para minimizar superficie de cambio, ya que
+  son detalles de implementacion que no se ven en Telegram/Grafana.
+- Impacto en almacenamiento: la tabla SQLite `diagnostico` cambio de columnas (ver
+  `src/almacenamiento/sqlite_repo.py`); como `CREATE TABLE IF NOT EXISTS` no migra columnas,
+  el archivo `data/aiproject.db` existente tuvo que borrarse para recrearse con el schema
+  nuevo — no hay perdida de datos de valor (SQLite en el MVP es un artefacto de desarrollo
+  desechable, ver D9).
+- No se tocaron `definicion/arquitectura_sistema.md` ni `definicion/caso_de_uso_fase1.md`
+  (docs de diseno pre-D9 ya divergentes del codigo implementado en otros aspectos, nunca
+  reconciliados) ni `investigacion/sistema_src_funcionamiento_detallado.md` (doc de estudio
+  para NotebookLM escrito el mismo dia, queda desactualizado en las secciones que describen
+  el diagnostico viejo hasta que se regenere aparte).

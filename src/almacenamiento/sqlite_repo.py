@@ -1,4 +1,5 @@
 """Acceso a SQLite: Equipo, Umbral, Alerta, Diagnostico (data-model.md, D9 reemplaza MySQL)."""
+import json
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -38,11 +39,8 @@ CREATE TABLE IF NOT EXISTS alerta (
 CREATE TABLE IF NOT EXISTS diagnostico (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     alerta_id INTEGER NOT NULL UNIQUE REFERENCES alerta(id),
-    causa_probable TEXT,
-    razonamiento TEXT,
-    urgencia TEXT,
-    accion_recomendada TEXT,
-    confianza TEXT,
+    resumen_ejecutivo TEXT,
+    hechos_destacados TEXT,
     generado_en TEXT NOT NULL,
     fallo INTEGER NOT NULL DEFAULT 0
 );
@@ -159,16 +157,12 @@ def crear_diagnostico(alerta_id: int, resultado: dict, fallo: bool = False) -> i
     with conexion() as conn:
         cursor = conn.execute(
             """INSERT INTO diagnostico
-               (alerta_id, causa_probable, razonamiento, urgencia, accion_recomendada,
-                confianza, generado_en, fallo)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+               (alerta_id, resumen_ejecutivo, hechos_destacados, generado_en, fallo)
+               VALUES (?, ?, ?, ?, ?)""",
             (
                 alerta_id,
-                resultado.get("causa_probable"),
-                resultado.get("razonamiento"),
-                resultado.get("urgencia"),
-                resultado.get("accion_recomendada"),
-                resultado.get("confianza"),
+                resultado.get("resumen_ejecutivo"),
+                json.dumps(resultado.get("hechos_destacados") or []),
                 datetime.now(timezone.utc).isoformat(),
                 1 if fallo else 0,
             ),

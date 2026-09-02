@@ -15,11 +15,8 @@ from src.almacenamiento import influx_repo, sqlite_repo
 from src.diagnostico import parser
 
 _DIAGNOSTICO_OK = {
-    "causa_probable": "degradacion del sistema de refrigeracion",
-    "razonamiento": "prueba",
-    "urgencia": "MEDIA",
-    "accion_recomendada": "prueba",
-    "confianza": "ALTA",
+    "resumen_ejecutivo": "prueba",
+    "hechos_destacados": ["prueba"],
     "fallo": False,
 }
 

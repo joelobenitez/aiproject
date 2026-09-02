@@ -19,11 +19,8 @@ def _con_cliente_falso(monkeypatch):
 def test_escribir_diagnostico_exitoso_escribe_un_punto(monkeypatch):
     write_api_falso = _con_cliente_falso(monkeypatch)
     resultado = {
-        "causa_probable": "degradacion de refrigeracion",
-        "razonamiento": "temperatura en ascenso sostenido",
-        "urgencia": "MEDIA",
-        "accion_recomendada": "revisar sistema de refrigeracion",
-        "confianza": "alta",
+        "resumen_ejecutivo": "La temperatura del motor alcanzo el umbral de ALERTA.",
+        "hechos_destacados": ["Temperatura actual: 87.3C", "Tendencia 24h: incremento sostenido"],
     }
 
     influx_repo.escribir_diagnostico("motor_001", 42, resultado, fallo=False)
@@ -46,7 +43,7 @@ def test_escribir_diagnostico_con_fallo_escribe_campos_en_blanco(monkeypatch):
     punto = write_api_falso.write.call_args.kwargs["record"]
     texto = punto.to_line_protocol()
     assert "fallo=true" in texto
-    assert 'causa_probable=""' in texto
+    assert 'resumen_ejecutivo=""' in texto
 
 
 def test_escribir_diagnostico_no_relanza_si_falla_la_escritura(monkeypatch):
@@ -55,4 +52,4 @@ def test_escribir_diagnostico_no_relanza_si_falla_la_escritura(monkeypatch):
     monkeypatch.setattr(influx_repo, "_obtener_cliente", lambda: cliente_falso)
 
     # No debe lanzar excepcion (best-effort, mismo patron que escribir_evento_alerta)
-    influx_repo.escribir_diagnostico("motor_001", 44, {"causa_probable": "x"}, fallo=False)
+    influx_repo.escribir_diagnostico("motor_001", 44, {"resumen_ejecutivo": "x"}, fallo=False)

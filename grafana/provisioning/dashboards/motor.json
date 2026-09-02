@@ -51,7 +51,7 @@
     },
     {
       "id": 4,
-      "title": "Diagnostico IA (ultimo disponible)",
+      "title": "Resumen de IA (ultimo disponible)",
       "type": "table",
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
       "datasource": { "type": "influxdb", "uid": "aiproject-influxdb" },
@@ -69,7 +69,7 @@
                   {
                     "type": "value",
                     "options": {
-                      "true": { "text": "Diagnostico no disponible (fallo del nucleo cognitivo)", "color": "red" },
+                      "true": { "text": "Resumen no disponible (fallo del nucleo cognitivo)", "color": "red" },
                       "false": { "text": "OK", "color": "green" }
                     }
                   }
@@ -87,20 +87,14 @@
             "indexByName": {
               "_time": 0,
               "fallo": 1,
-              "urgencia": 2,
-              "causa_probable": 3,
-              "accion_recomendada": 4,
-              "razonamiento": 5,
-              "confianza": 6,
-              "alerta_id": 7
+              "resumen_ejecutivo": 2,
+              "hechos_destacados": 3,
+              "alerta_id": 4
             },
             "renameByName": {
               "_time": "Generado",
-              "causa_probable": "Causa probable",
-              "razonamiento": "Razonamiento",
-              "urgencia": "Urgencia",
-              "accion_recomendada": "Accion recomendada",
-              "confianza": "Confianza",
+              "resumen_ejecutivo": "Resumen ejecutivo",
+              "hechos_destacados": "Hechos destacados",
               "alerta_id": "Alerta #"
             }
           }

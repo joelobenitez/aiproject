@@ -27,12 +27,12 @@ def formatear_mensaje_exitoso(
     severidad: str,
     resultado: dict,
 ) -> str:
+    hechos = "\n".join(f"- {hecho}" for hecho in resultado.get("hechos_destacados") or [])
     return (
         f"[{severidad}] {equipo_nombre}\n"
         f"Variable: {variable} = {valor} {unidad} (umbral: {umbral} {unidad})\n\n"
-        f"Causa probable: {resultado['causa_probable']}\n"
-        f"Urgencia: {resultado['urgencia']} | Confianza: {resultado['confianza']}\n\n"
-        f"Accion recomendada: {resultado['accion_recomendada']}"
+        f"{resultado['resumen_ejecutivo']}\n\n"
+        f"Hechos:\n{hechos}"
     )
 
 
@@ -42,7 +42,7 @@ def formatear_mensaje_fallback(
     return (
         f"[{severidad}] {equipo_nombre}\n"
         f"Variable: {variable} = {valor} {unidad} (umbral: {umbral} {unidad})\n\n"
-        f"Diagnostico no disponible (fallo temporal del servicio de IA). Revisar manualmente."
+        f"Resumen no disponible (fallo temporal del servicio de IA). Revisar manualmente."
     )
 
 
@@ -52,7 +52,7 @@ def formatear_mensaje_crudo(
     return (
         f"[{severidad}] {equipo_nombre}\n"
         f"Variable: {variable} = {valor} {unidad} (umbral: {umbral} {unidad})\n\n"
-        f"Diagnostico de IA disponible bajo demanda para la alerta #{alerta_id} "
+        f"Resumen de IA disponible bajo demanda para la alerta #{alerta_id} "
         f"(POST /diagnosticar/{alerta_id})."
     )
 

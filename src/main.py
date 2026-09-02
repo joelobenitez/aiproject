@@ -6,6 +6,7 @@ D13: el diagnostico de IA es automatico solo para severidad CRITICO. Para ALERTA
 mensaje crudo (datos + umbral, sin IA) y el diagnostico queda disponible bajo demanda via
 POST /diagnosticar/<alerta_id> (servidor HTTP embebido, ver src/api.py).
 """
+import json
 import logging
 import sys
 from datetime import datetime, timezone
@@ -62,7 +63,7 @@ def _diagnosticar_y_notificar(
     if fallo:
         logger.warning("Diagnostico no disponible para alerta #%s (fallo del nucleo cognitivo)", alerta_id)
     else:
-        logger.info("Diagnostico para alerta #%s: %s", alerta_id, resultado.get("causa_probable"))
+        logger.info("Diagnostico para alerta #%s: %s", alerta_id, resultado.get("resumen_ejecutivo"))
 
     _notificar(equipo_id, variable, valor, unidad, severidad, resultado, fallo)
     return resultado
@@ -81,6 +82,7 @@ def diagnosticar_bajo_demanda(alerta_id: int) -> dict:
     existente = sqlite_repo.obtener_diagnostico(alerta_id)
     if existente is not None:
         existente["fallo"] = bool(existente["fallo"])
+        existente["hechos_destacados"] = json.loads(existente["hechos_destacados"] or "[]")
         existente["cacheado"] = True
         return existente
 
