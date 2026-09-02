@@ -260,3 +260,68 @@ clasica documentada en la mayoria de ejemplos/tutoriales (`ModbusSlaveContext(hr
 **No romper:** no correr `pip install -U pymodbus` (ni quitar el pin de `requirements.txt`)
 sin releer la API nueva primero — el codigo actual de `simulador_modbus_rtu.py` asume la API
 clasica de 3.7.x y va a fallar con `ImportError`/`TypeError` contra 3.8+.
+
+---
+
+## El "Data to Server" del RUT956 (D18) apunta a una IP de PC especifica, no a un destino estable
+
+**Area que protege:** la coleccion `Rut_Mqtt` del RUT956 (Services -> Data to Server) y
+cualquier decision de "que maquina es el gateway del stack".
+
+**Detalle:** D18 configuro el router para publicar al Mosquitto local usando
+`192.168.1.195` — la IP que la terminal `jbenitez` obtuvo por DHCP en la red del RUT956 via
+el adaptador USB-Ethernet en la sesion 2026-09-02. Esta IP es especifica de **esta PC en esta
+conexion**, no un valor estable:
+- Si se retoma el trabajo desde la terminal `joelo` (otra maquina fisica), esa IP no le
+  pertenece — el RUT956 seguiria publicando hacia la PC `jbenitez`, no hacia donde este
+  corriendo el stack Docker en ese momento.
+- Aunque sea la misma maquina, si la IP vino de DHCP (no confirmado si el RUT956 la fijo o
+  no), puede cambiar en la proxima reconexion/reinicio, y el router quedaria publicando a una
+  IP que ya no existe **sin ningun error visible** — mismo patron silencioso que el riesgo de
+  los contenedores Docker viejos.
+
+**No romper:** antes de dar por valida la conectividad RUT956 -> broker en una sesion futura,
+confirmar que la IP en la config de "Data to Server" sigue siendo la de la maquina que
+efectivamente tiene el stack Docker levantado. Pendiente de decision (no resuelta todavia):
+asignarle IP fija a la PC que oficie de gateway del stack, o resolverlo distinto si el plan
+final es correr el stack en un servidor fijo en vez de una laptop de desarrollo.
+
+---
+
+## Migraciones de schema en InfluxDB rompen paneles de Grafana si no se limpian los datos viejos
+
+**Area que protege:** cualquier cambio de campos/tipos en un measurement de InfluxDB que ya
+tiene escrituras con el esquema anterior (ej. D17: `diagnosticos` paso de
+`causa_probable/razonamiento/urgencia/accion_recomendada/confianza` a
+`resumen_ejecutivo/hechos_destacados`), leido por un panel de Grafana con rango amplio
+(`range(start: -30d)` en este caso).
+
+**Detalle:** confirmado 2026-09-02 en la maquina `jbenitez`. El measurement `diagnosticos`
+tenia puntos viejos (pre-D17) mezclados con el formato nuevo dentro de la ventana de 30 dias
+que consulta el panel "Resumen de IA". Flux agrupa internamente por el conjunto de
+campos/tags de cada punto — `pivot(rowKey: ["_time"]) |> limit(n: 1)` NO garantiza una sola
+fila global cuando coexisten esquemas distintos, produce resultados con columnas
+mezcladas/vacias segun el grupo. Esto rompio el render del panel de tabla en el frontend de
+Grafana (`TypeError: Cannot read properties of null (reading 'length')`; a veces solo el
+panel quedaba vacio, otras veces se congelaba la pestaña entera) — es un bug de Grafana
+procesando datos con forma inconsistente, no un bug de nuestro codigo.
+
+Cuando se implemento D17 (2026-09-01, terminal `joelo`) se borro y recreo `data/aiproject.db`
+(SQLite) para el schema nuevo, pero **nadie limpio los puntos viejos de `diagnosticos` en
+InfluxDB** — ese paso de la migracion quedo incompleto. Es probable que la maquina `joelo`
+tenga el mismo problema latente sin haberlo notado todavia (se valido una sola vez y puede no
+haberse repetido el patron exacto que dispara el crash del frontend).
+
+**Fix aplicado (`jbenitez`, 2026-09-02):**
+```
+influx delete --bucket lecturas_motor --org aiproject \
+  --predicate '_measurement="diagnosticos"' \
+  --start 1970-01-01T00:00:00Z --stop 2026-09-02T00:00:00Z
+```
+Borra todo lo anterior a la fecha de hoy, dejando solo datos post-D17.
+
+**No romper:** ante cualquier cambio de schema futuro en un measurement de InfluxDB que ya
+tiene datos, limpiar (o migrar) los puntos viejos ahi tambien, no solo en SQLite — es el mismo
+tipo de paso de migracion, en dos lugares distintos que hay que recordar por separado. Revisar
+tambien la maquina `joelo` por las dudas (correr la misma query de deteccion: filtrar
+`diagnosticos` por rango amplio y ver si aparecen mas de un set de campos).

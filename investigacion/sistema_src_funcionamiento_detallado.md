@@ -38,7 +38,7 @@ un entorno industrial real.
 [Sensores / emulador]
         | MQTT (topico: empresa/planta/linea/equipo/variable)
         v
-[EMQX/Mosquitto broker]  <-- puerto 1883
+[Mosquitto broker]  <-- puerto 1883
         |
         v
 [src/main.py]  <-- UN SOLO proceso Python de vida larga (D9, D10)
