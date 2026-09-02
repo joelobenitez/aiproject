@@ -170,12 +170,15 @@
 > **D17** en `memory/decisions.md`, y se actualizaron las dos menciones en `CLAUDE.md` que
 > describian el comportamiento viejo ("dice POR QUE y QUE HACER" / "diagnostico con causa
 > probable, urgencia y accion recomendada") para que el contrato del proyecto siga siendo
-> preciso. Deliberadamente NO se tocaron `definicion/arquitectura_sistema.md`,
-> `definicion/caso_de_uso_fase1.md` (docs pre-D9 ya divergentes en otros aspectos) ni
-> `investigacion/sistema_src_funcionamiento_detallado.md` (doc de estudio para NotebookLM
-> escrito el mismo dia — queda desactualizado en las secciones sobre el diagnostico viejo,
-> pendiente de regenerar si Joelo lo pide). **Sin commitear todavia** (a la espera de que
-> Joelo lo pida, ver `memory/decisions.md` D17 para el detalle completo).
+> preciso. Deliberadamente NO se tocaron `definicion/arquitectura_sistema.md` ni
+> `definicion/caso_de_uso_fase1.md` (docs pre-D9 ya divergentes en otros aspectos). **Commiteado
+> y pusheado** como `8d72852` en `main` (ver `memory/decisions.md` D17 para el detalle
+> completo). **Misma sesion, continuacion:** se actualizo tambien
+> `investigacion/sistema_src_funcionamiento_detallado.md` (el doc de estudio para NotebookLM
+> escrito mas temprano el mismo dia) para reflejar D17 — secciones 1, 2, 3, 7, 8.3, 8.5, 9,
+> 11.1, 11.2, 13, 16 y 18 reescritas, incluyendo un ejemplo real de contexto/respuesta
+> capturado en vivo post-D17 y una comparacion directa contra el ejemplo pre-D17 que el doc
+> tenia originalmente. Commiteado y pusheado como `fd06a4b`.
 
 ---
 
@@ -218,8 +221,10 @@ Falta diagnosticar la causa (revisar a que puerto fisico del RUT956 esta conecta
 tira el navegador: timeout, conexion rechazada, u otro). Ver `CLAUDE.md` (seccion Hardware
 Confirmado) y D11 en `memory/decisions.md` para el contexto tecnico ya definido.
 
-**Git:** todas las terminales (`joelo` y `jbenitez`) estan sincronizadas en `211c1dd` al
-cierre de esta sesion — nada pendiente de pull.
+**Git:** local y remoto sincronizados en `fd06a4b` al cierre de esta sesion (terminal
+`joelo`). La terminal `jbenitez` quedo en `211c1dd` — al retomar ahi hace falta `git pull`
+para traer `079633d`, `8d72852` y `fd06a4b` (la sesion de hoy: riesgo de contenedores Docker
+viejos + D17 completo).
 
 **Anotado como trabajo futuro (no urgente, sin fecha):** escalar la infraestructura de
 Telegram a **Nivel 1** (ver D2 en `memory/decisions.md` y el "camino natural siguiente" de
