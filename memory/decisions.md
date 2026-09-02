@@ -656,3 +656,62 @@ memoria del proyecto cargada. Los comandos `/speckit-*` no estan instalados en l
 `specs/003-robustez-seguridad/` desde `.specify/templates/spec-template.md`, escribiendo el
 contenido a mano. Se actualizo `.specify/feature.json`, que todavia apuntaba a
 `specs/002-grafana-llm-diagnostico` (jubilada por D16).
+
+---
+
+## D20 — Resolucion de las 9 `NEEDS CLARIFICATION` de la spec 003 (defaults razonables)
+
+**Fecha:** 2026-09-02
+**Quien decidio:** Joelo (via "avanza", confiando el criterio tecnico a Claude Code) + Claude Code
+
+**Decision — seguridad de aplicacion (preguntas 3, 4, 5 del handoff, las unicas que son
+decisiones de producto y no solo de diseno):**
+
+- **Autenticacion del endpoint** (`POST /diagnosticar/<alerta_id>`): token compartido en un
+  header (`Authorization` o header custom, a definir en `plan.md`), validado contra una env
+  var nueva antes de ejecutar el diagnostico. `GET /health` queda sin autenticar (no expone
+  datos, sirve para chequeos de salud externos simples). Se descarta la allowlist de IP: la
+  sesion de hoy mismo (D18) encontro que las IPs en esta red no son estables — una allowlist
+  seria fragil desde el dia uno.
+- **Credenciales del broker MQTT:** se agrega usuario/password (Mosquitto
+  `password_file`, `allow_anonymous false`) YA, en esta spec. **TLS queda deliberadamente
+  fuera de esta spec** — requiere gestion de certificados (aunque sea self-signed) y no hay
+  today una necesidad inmediata que lo justifique frente al esfuerzo; se revisita cuando el
+  RUT956 y la PC del stack se acerquen a compartir la red de planta real (ver H7 del
+  handoff). El RUT956 ya soporta usuario/password en su "Data to Server" (visto en la sesion
+  de D18) — solo hay que recargar esa config con las credenciales nuevas.
+- **Puertos publicados al host:** de los 4 actuales (1883, 8086, 8000, 3000):
+  - `8000` (API) y `8086` (InfluxDB) pasan a bindear solo `127.0.0.1` — ningun cliente
+    legitimo hoy los necesita desde la LAN (el RUT956 no habla con ninguno de los dos).
+  - `1883` (MQTT) y `3000` (Grafana) se quedan expuestos a la LAN: el primero porque el
+    RUT956 es un dispositivo externo que necesita llegar al broker (D18); el segundo porque
+    ver el dashboard desde otro dispositivo en la red es un caso de uso valido y Grafana ya
+    tiene su propio login (reforzado por FR-012 de la spec, que saca el password default).
+
+**Decision — resto de las preguntas (diseno tecnico, sin trade-off de producto):**
+
+- **Banda muerta y retardo (pregunta 1):** 5% del `valor_alerta` de cada variable (calculado
+  desde la tabla `umbral` ya existente, no un numero nuevo hardcodeado) como banda muerta
+  para volver a NORMAL, y 3 lecturas consecutivas por encima del umbral para confirmar un
+  evento nuevo. Ambos valores configurables (constante o env var, a definir en `plan.md`).
+- **Skew del reloj del sensor (pregunta 2):** ventana aceptable de 5 minutos (adelante o
+  atras) respecto del reloj del servidor. Si se excede, la lectura NO se descarta —se
+  evalua igual pero usando el reloj del servidor en vez del timestamp del payload para el
+  calculo de cooldown, y se loguea un warning. Descartar la lectura entera perderia datos
+  reales de un sensor con reloj mal configurado (escenario plausible: RUT956 sin NTP).
+- **Politica de reintento del resumen fallido (pregunta 6):** un reintento sobrescribe el
+  registro fallido anterior (mantiene la relacion 1:1 `alerta_id UNIQUE` sin cambiar el
+  schema mas de lo necesario). Sin tope de reintentos: pedirlo requiere una accion manual
+  explicita (llamar al endpoint), que ya es su propio limite natural de tasa.
+- **Migracion del schema de SQLite (pregunta 8):** se acepta borrar y recrear
+  `data/aiproject.db` al desplegar esta spec, mismo patron ya usado en D17 — consistente con
+  D9 (SQLite en el MVP es un artefacto de desarrollo desechable).
+- **Constitucion (pregunta 9):** se resuelve en el Constitution Check de `plan.md`, no
+  requiere decision de Joelo — es analisis tecnico de si la cola/worker interno cae dentro
+  de la excepcion de fase MVP del Principio I (D9/D12).
+- **Secretos de produccion (pregunta 7):** sin cambios — sigue "Fuera de alcance" tal como ya
+  fijaba la spec (D19); D8 sigue siendo la unica decision vigente sobre secretos (`.env`
+  local, etapa de desarrollo).
+
+**Alcance:** esta decision resuelve unicamente las `NEEDS CLARIFICATION` de la spec 003 para
+poder avanzar a `plan.md` — no reabre el alcance ya fijado por D19.

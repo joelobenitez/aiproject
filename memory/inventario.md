@@ -38,7 +38,7 @@ Mapa de artefactos: ubicacion, contenido en una linea, estado.
 | Templates | `.specify/templates/*.md` | spec-template, plan-template, tasks-template, checklist-template, constitution-template | Sin tocar (default de Spec Kit) |
 | Scripts | `.specify/scripts/powershell/*.ps1` | Scripts de soporte del workflow Spec Kit (PowerShell, acorde al entorno Windows) | Sin tocar (default de Spec Kit) |
 | Comandos | `.claude/skills/speckit-*/SKILL.md` | 9 comandos `/speckit-constitution`, `/speckit-specify`, `/speckit-clarify`, `/speckit-plan`, `/speckit-checklist`, `/speckit-tasks`, `/speckit-analyze`, `/speckit-implement`, `/speckit-converge`, `/speckit-taskstoissues` | Instalados Session 05. **No instalados en la terminal `jbenitez`** (`.claude/` no viaja con git) — rodeo usado: `.specify/scripts/powershell/*.ps1` (100% local) + templates a mano |
-| Feature 003 — spec | `specs/003-robustez-seguridad/spec.md` | Robustez + seguridad del servicio (H1-H7 de `investigacion/handoff_spec_003_robustez.md`), estado del detector persistido. Ver D19 | Draft — 9 `NEEDS CLARIFICATION` pendientes antes de `plan.md` |
+| Feature 003 | `specs/003-robustez-seguridad/` (spec.md, plan.md, data-model.md, quickstart.md) | Robustez + seguridad del servicio (H1-H7 de `investigacion/handoff_spec_003_robustez.md`), estado del detector persistido. Ver D19 (alcance) y D20 (`NEEDS CLARIFICATION` resueltas) | Fase 0+1 completas (spec clarificada + plan tecnico). Falta `tasks.md` e implementacion |
 
 La herramienta (`.specify/` + comandos) queda activa e instalada — no se jubila. Los
 artefactos generados para el feature 001 (spec/plan/tasks/etc.) sí se jubilaron, ver

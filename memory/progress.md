@@ -16,22 +16,20 @@
 
 ---
 
-## Foco actual: spec 003 (robustez + seguridad del servicio) — no bloqueada, avanzar aca
+## Foco actual: spec 003 (robustez + seguridad del servicio) — Fase 0+1 completas
 
-`specs/003-robustez-seguridad/spec.md` escrita (D19), a partir de un handoff de auditoria
-(`investigacion/handoff_spec_003_robustez.md`) que encontro 7 hallazgos reales en `src/`
-(hilo de ingesta que muere en silencio, pipeline bloqueante en el callback MQTT, deteccion
-sin banda muerta, cooldown solo en RAM, resumen fallido cacheado para siempre, race en el
-endpoint bajo demanda, superficie de seguridad mas ancha de lo documentado). Queda **Draft**
-con 9 `NEEDS CLARIFICATION` — antes de `plan.md` hay que resolver sobre todo: mecanismo de
-auth del endpoint, credenciales/TLS del broker, y que puertos cerrar (preguntas 3, 4, 5 del
-handoff) son decisiones de producto, no de diseno tecnico. El resto puede resolverse con
-valores por defecto razonables en `plan.md`/`research.md`.
+`specs/003-robustez-seguridad/` completa: `spec.md` (D19, sin `NEEDS CLARIFICATION`
+pendientes tras D20), `plan.md` (diseno tecnico concreto por hallazgo: cola+worker para H2,
+banda muerta 5%/3 lecturas para H3, tabla `detector_estado` para H4, UPSERT para H5, lock
+para H6, credenciales+puertos+password de Grafana para H7), `data-model.md` y `quickstart.md`
+(6 escenarios de validacion manual). Constitution Check: todo PASS.
 
-**Proximo paso:** resolver los `NEEDS CLARIFICATION` (con Joelo, sobre todo las 3 de
-seguridad) y seguir con el equivalente de `/speckit-plan`. Comandos `/speckit-*` no
-instalados en esta terminal — usar `.specify/scripts/powershell/*.ps1` + templates a mano,
-mismo rodeo que el feature 002 (ver D19, nota operativa).
+**Proximo paso:** `tasks.md` (equivalente de `/speckit-tasks`) y despues implementacion.
+Ojo — la implementacion de H7 va a requerir accion manual fuera del codigo: generar
+credenciales nuevas de Mosquitto, actualizar la config "Data to Server" del RUT956 con esas
+credenciales (D18), y rotar `ANTHROPIC_API_KEY` en `console.anthropic.com`. Comandos
+`/speckit-*` no instalados en esta terminal — seguir usando
+`.specify/scripts/powershell/*.ps1` + templates a mano (ver D19, nota operativa).
 
 ---
 

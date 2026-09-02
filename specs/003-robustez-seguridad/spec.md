@@ -4,7 +4,7 @@
 
 **Created**: 2026-09-02
 
-**Status**: Draft
+**Status**: Clarificado (sin `NEEDS CLARIFICATION` pendientes, ver D20) — listo para `plan.md`
 
 **Input**: User description: "Robustez y seguridad del servicio de deteccion: ingesta que no
 muere en silencio, pipeline no bloqueante, deteccion con banda muerta, cooldown persistente,
@@ -127,11 +127,10 @@ indefinidamente.
 1. **Given** una variable en cooldown activo, **When** el proceso del servicio se reinicia,
    **Then** al volver a arrancar el cooldown sigue vigente hasta su vencimiento original —
    no se genera un evento nuevo para esa variable en ese lapso.
-2. **Given** una lectura cuyo timestamp esta fuera de una ventana aceptable respecto del
-   reloj del servidor, **When** el sistema la recibe, **Then** aplica la politica definida
-   [NEEDS CLARIFICATION: descartar la lectura, o aceptarla usando el reloj del servidor en
-   vez del timestamp del payload — pregunta 2 de `investigacion/handoff_spec_003_robustez.md`]
-   y lo deja registrado en el log.
+2. **Given** una lectura cuyo timestamp esta fuera de una ventana de 5 minutos respecto del
+   reloj del servidor (D20), **When** el sistema la recibe, **Then** la evalua igual usando
+   el reloj del servidor en vez del timestamp del payload para el calculo del cooldown, y
+   deja un warning registrado en el log — no descarta la lectura.
 
 ---
 
@@ -153,14 +152,14 @@ credencial definida falla; ninguna de las dos cosas dispara una llamada a la API
 
 1. **Given** el broker configurado con autenticacion, **When** un cliente publica sin
    credenciales validas, **Then** el broker rechaza la conexion/publicacion.
-2. **Given** el endpoint `POST /diagnosticar/<alerta_id>`, **When** se llama sin la
-   credencial definida [NEEDS CLARIFICATION: token en header, allowlist de IP, o dejar de
-   publicar el puerto — pregunta 3 del handoff], **Then** el sistema responde 401/403 y NO
-   llama a la API de Claude.
-3. **Given** la lista de puertos publicados al host (1883, 8086, 8000, 3000), **When** se
-   revisa cada uno contra su necesidad real, **Then** los que no la tengan quedan atados a
-   `127.0.0.1` o dejan de publicarse [NEEDS CLARIFICATION: cuales exactamente — pregunta 5
-   del handoff].
+2. **Given** el endpoint `POST /diagnosticar/<alerta_id>`, **When** se llama sin el token
+   compartido definido (D20 — header dedicado, no allowlist de IP: las IPs de esta red no
+   son estables, ver D18), **Then** el sistema responde 401 y NO llama a la API de Claude.
+   `GET /health` queda sin autenticar.
+3. **Given** los 4 puertos publicados al host, **When** se aplica D20, **Then** `8000`
+   (API) y `8086` (InfluxDB) quedan atados a `127.0.0.1` (ningun cliente legitimo los
+   necesita desde la LAN); `1883` (MQTT, lo necesita el RUT956) y `3000` (Grafana, para
+   verla desde otro dispositivo) se quedan expuestos a la LAN.
 4. **Given** `ANTHROPIC_API_KEY` expuesta en un transcript de una sesion anterior
    (2026-09-01), **When** se cierra esta historia, **Then** la key fue rotada en
    `console.anthropic.com` y el valor viejo ya no es valido.
@@ -184,9 +183,9 @@ alerta y confirmar una sola llamada a Claude y ninguna excepcion sin capturar.
 **Acceptance Scenarios**:
 
 1. **Given** un diagnostico previo marcado `fallo: true`, **When** se pide de nuevo via el
-   endpoint, **Then** el sistema reintenta la llamada a Claude en vez de devolver el fallo
-   cacheado indefinidamente [NEEDS CLARIFICATION: sobrescribir el registro fallido o
-   guardar historial de intentos, y si hay tope de reintentos — pregunta 6 del handoff].
+   endpoint, **Then** el sistema reintenta la llamada a Claude y sobrescribe el registro
+   fallido con el resultado nuevo (D20 — mantiene la relacion 1:1 `alerta_id UNIQUE`, sin
+   tope de reintentos: pedirlo ya requiere una accion manual explicita).
 2. **Given** dos `POST /diagnosticar/<id>` simultaneos para la misma alerta, **When** ambos
    llegan practicamente al mismo tiempo, **Then** solo uno dispara la llamada a Claude y el
    otro espera/devuelve el mismo resultado — nunca dos llamadas pagas ni una excepcion sin
@@ -201,9 +200,10 @@ alerta y confirmar una sola llamada a Claude y ninguna excepcion sin capturar.
   con warning) se mantiene, pero MUST verificarse ANTES de escribir en InfluxDB (hoy se
   escribe primero, se valida despues — ver H7, tabla de superficie de seguridad).
 - Que pasa si la cola interna de US2 se llena mas rapido de lo que el worker puede procesar
-  (backpressure) [NEEDS CLARIFICATION: no cubierto explicitamente por el handoff — decidir
-  en `plan.md` si hace falta un limite de tamano y que pasa al alcanzarlo, dado que a la
-  escala actual (un motor, lecturas cada pocos segundos) es un caso extremo].
+  (backpressure): la cola tiene un tamano maximo acotado; al llenarse, descarta la entrada
+  mas vieja y loguea un warning en vez de bloquear el callback MQTT (a la escala actual —un
+  motor, lecturas cada pocos segundos— es un caso extremo, no el comun; el valor exacto del
+  limite se fija en `plan.md`).
 - Que pasa si se persiste el cooldown pero `data/aiproject.db` no existe todavia (primer
   arranque): el comportamiento actual de `inicializar_schema()` (idempotente) se mantiene —
   NO MUST requerir un paso manual adicional.
@@ -216,41 +216,38 @@ alerta y confirmar una sola llamada a Claude y ninguna excepcion sin capturar.
   una lectura MQTT individual (normalizacion, escritura a InfluxDB, deteccion, persistencia
   de alerta) sin terminar el hilo/loop de suscripcion MQTT — la ingesta MUST seguir viva
   ante un fallo puntual. (H1)
-- **FR-002**: El sistema MUST exponer un estado de salud que distinga "el proceso responde"
-  de "la ingesta esta efectivamente viva" [NEEDS CLARIFICATION: que forma toma esto —
-  timestamp de la ultima lectura procesada en `/health`, metrica separada, o log
-  estructurado — no especificado en el handoff, decidir en `plan.md`].
+- **FR-002**: `GET /health` MUST incluir el timestamp de la ultima lectura MQTT procesada con
+  exito, para distinguir "el proceso responde" de "la ingesta esta efectivamente viva" — un
+  valor ausente o muy viejo es la senal de que la ingesta murio en silencio (H1).
 - **FR-003**: El trabajo que puede demorar (persistencia, llamada al nucleo de IA,
   notificacion Telegram) MUST salir del callback que recibe el mensaje MQTT, de forma que
   una alerta lenta no bloquee la recepcion de lecturas nuevas. (H2)
-- **FR-004**: La deteccion MUST aplicar una banda muerta para volver de ALERTA/CRITICO a
-  NORMAL y MUST requerir una cantidad configurable de lecturas consecutivas por encima del
-  umbral antes de generar el evento de alerta [NEEDS CLARIFICATION: valor de la banda
-  (absoluto por variable o porcentaje del umbral) y cantidad de lecturas consecutivas —
-  pregunta 1 del handoff]. (H3)
+- **FR-004**: La deteccion MUST aplicar una banda muerta de 5% del `valor_alerta` de cada
+  variable (calculada desde la tabla `umbral` ya existente, no un numero nuevo hardcodeado)
+  para volver de ALERTA/CRITICO a NORMAL, y MUST requerir 3 lecturas consecutivas por encima
+  del umbral antes de generar el evento de alerta (D20; ambos valores configurables). (H3)
 - **FR-005**: El estado del cooldown del detector (severidad activa y `cooldown_hasta` por
   equipo+variable) MUST persistir mas alla de un reinicio del proceso/contenedor. (H4)
 - **FR-006**: El sistema MUST validar que el timestamp de una lectura entrante este dentro
-  de una ventana aceptable respecto del reloj del servidor, y MUST aplicar una politica
-  explicita cuando no lo este [NEEDS CLARIFICATION: tamano de la ventana y que hacer al
-  excederla — pregunta 2 del handoff]. (H4)
+  de una ventana de 5 minutos respecto del reloj del servidor; si la excede, MUST evaluar la
+  lectura igual usando el reloj del servidor para el calculo de cooldown (no descartarla) y
+  MUST loguear un warning (D20). (H4)
 - **FR-007**: Un diagnostico marcado `fallo: true` MUST poder reintentarse en un pedido
-  posterior al mismo endpoint, en vez de devolver el fallo cacheado para siempre
-  [NEEDS CLARIFICATION: politica de reintento — pregunta 6 del handoff]. (H5)
+  posterior al mismo endpoint: el reintento sobrescribe el registro fallido con el resultado
+  nuevo, sin tope de intentos (D20). (H5)
 - **FR-008**: Dos pedidos simultaneos de `POST /diagnosticar/<alerta_id>` para la misma
   alerta MUST resultar en una sola llamada a la API de Claude y NO MUST generar una
   excepcion sin capturar expuesta al cliente HTTP. (H6)
-- **FR-009**: El broker MQTT MUST requerir autenticacion (usuario/password por cliente como
-  minimo) para publicar o suscribirse [NEEDS CLARIFICATION: si TLS entra en el alcance de
-  esta spec o queda para despues, y si hace falta ACL por topico ademas de autenticacion —
-  pregunta 4 del handoff]. (H7)
-- **FR-010**: El endpoint `POST /diagnosticar/<alerta_id>` MUST requerir una credencial para
-  ejecutar el diagnostico [NEEDS CLARIFICATION: mecanismo — token compartido, allowlist de
-  IP, o dejar de publicar el puerto — pregunta 3 del handoff]. `GET /health`
-  [NEEDS CLARIFICATION: queda abierto o requiere la misma credencial].
-- **FR-011**: De los 4 puertos publicados al host (1883, 8086, 8000, 3000), el sistema MUST
-  publicar solo los que el flujo de trabajo real necesita expuestos mas alla de
-  `127.0.0.1` [NEEDS CLARIFICATION: cuales exactamente — pregunta 5 del handoff].
+- **FR-009**: El broker MQTT MUST requerir usuario/password por cliente para publicar o
+  suscribirse (`allow_anonymous false`), con una ACL minima por topico (el credential del
+  RUT956/emulador solo puede publicar en el namespace del equipo; el del `servicio` solo
+  puede suscribirse ahi). TLS queda explicitamente fuera de esta spec — se revisita cuando
+  el RUT956 comparta red con la planta real (D20). (H7)
+- **FR-010**: El endpoint `POST /diagnosticar/<alerta_id>` MUST requerir un token compartido
+  en un header dedicado (D20 — no allowlist de IP, ver D18 sobre estabilidad de IPs en esta
+  red). `GET /health` queda sin autenticar (no expone datos sensibles).
+- **FR-011**: De los 4 puertos publicados al host, `8000` (API) y `8086` (InfluxDB) MUST
+  bindear solo `127.0.0.1`; `1883` (MQTT) y `3000` (Grafana) siguen expuestos a la LAN (D20).
 - **FR-012**: Grafana NO MUST arrancar con el password de administrador por defecto
   (`admin`) en ningun entorno mas alla de un `.env` local no commiteado.
 - **FR-013**: `ANTHROPIC_API_KEY` MUST rotarse en `console.anthropic.com` — el valor que
@@ -266,10 +263,9 @@ alerta y confirmar una sola llamada a Claude y ninguna excepcion sin capturar.
   memoria + worker, u otra alternativa) MUST declararse explicitamente en el Constitution
   Check del plan como compatible con la excepcion de fase MVP de D9 (Principio I) — no
   reabre la separacion de capas de D11. (US2, pregunta 9 del handoff)
-- **FR-016**: La migracion del schema de SQLite para persistir el cooldown MUST decidir si
-  se acepta borrar y recrear `data/aiproject.db` (mismo patron que D17) o si hace falta una
-  migracion real que preserve el historial de alertas [NEEDS CLARIFICATION: pregunta 8 del
-  handoff].
+- **FR-016**: La migracion del schema de SQLite para persistir el cooldown acepta borrar y
+  recrear `data/aiproject.db` al desplegar esta spec, mismo patron que D17 (D20) — no hace
+  falta preservar el historial de alertas viejo.
 - **FR-017**: El manejo de secretos de produccion (mas alla de `.env` local, D8) sigue
   diferido — esta spec NO lo resuelve (ver pregunta 7 del handoff y "Fuera de alcance").
 
@@ -278,11 +274,10 @@ alerta y confirmar una sola llamada a Claude y ninguna excepcion sin capturar.
 - **Estado del detector (persistido)**: por equipo+variable, la severidad activa y el
   `cooldown_hasta`. Hoy vive solo en memoria (`Detector._estado`); pasa a sobrevivir un
   reinicio del proceso.
-- **Credencial del endpoint**: el mecanismo de autenticacion que el cliente HTTP debe
-  presentar para llamar a `POST /diagnosticar/<alerta_id>` — su forma exacta es una
-  NEEDS CLARIFICATION de esta spec (FR-010).
-- **Credencial del broker MQTT**: usuario/password (y opcionalmente TLS/ACL) que un cliente
-  debe presentar para publicar/suscribirse — reemplaza el `allow_anonymous true` actual.
+- **Credencial del endpoint**: token compartido en un header dedicado que el cliente HTTP
+  debe presentar para llamar a `POST /diagnosticar/<alerta_id>` (D20, FR-010).
+- **Credencial del broker MQTT**: usuario/password por cliente, con ACL minima por topico
+  (sin TLS por ahora) — reemplaza el `allow_anonymous true` actual (D20, FR-009).
 
 ## Success Criteria *(mandatory)*
 
