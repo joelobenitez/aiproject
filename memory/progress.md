@@ -49,9 +49,26 @@
   directo — ese modo duplicaba la instancia del modulo y `ultima_lectura_en` quedaba en
   `null` para siempre. Ver D21 en `memory/decisions.md` para el detalle tecnico completo.
 
-**Proximo paso:** Fase 2 (Historia 3, T008-T011 — banda muerta + confirmacion por lecturas
-consecutivas en `src/deteccion/detector.py`), despues Fase 3 (Historia 4, cooldown
-persistido). Fase 4 (US5, seguridad) tiene 2 tareas manuales que no son codigo: **T024**
+**Fase 2 (T008-T011, H3) implementada y validada 2026-09-02:**
+- `src/deteccion/detector.py`: `CONFIRMACION_LECTURAS = 3` y `BANDA_MUERTA = 0.05` (D20).
+  `Detector._estado` suma `lecturas_consecutivas` (se resetea a 0 cuando una lectura no
+  supera el umbral). Un evento nuevo (primera alerta O escalada) solo se genera al llegar a
+  3 lecturas consecutivas. La vuelta a NORMAL exige bajar de `valor_alerta * 0.95`, no solo
+  cruzar el umbral en sentido inverso.
+- Detalle de diseno no anticipado en `plan.md`: una escalada ALERTA->CRITICO dispara de
+  inmediato (sin esperar 3 lecturas CRITICO nuevas) porque el contador de confirmacion sigue
+  vivo mientras el equipo no vuelve a NORMAL — evita retrasar una escalada real y preserva el
+  comportamiento que ya validaba el test existente de escalada.
+- `tests/unit/test_detector.py` reescrito: los tests viejos asumian alerta inmediata de una
+  sola lectura (ya no es el comportamiento vigente) + tests nuevos de aislada/confirmada/
+  banda muerta. 45/45 en verde.
+- Validado con el emulador real: escenario D con 3 semillas distintas -> 0 alertas cada vez;
+  escenario A -> exactamente 1 alerta (severidad ALERTA).
+
+**Proximo paso:** Fase 3 (Historia 4, T012-T017 — cooldown persistido en SQLite +
+validacion de skew del reloj del sensor, `src/almacenamiento/sqlite_repo.py` +
+`src/deteccion/detector.py`). Fase 4 (US5, seguridad) tiene 2 tareas manuales que no son
+codigo: **T024**
 rotar `ANTHROPIC_API_KEY` en `console.anthropic.com` (pendiente desde el 2026-09-01) y
 **T025** actualizar la config "Data to Server" del RUT956 con las credenciales MQTT nuevas
 (D18) — sin esto el router deja de poder publicar en cuanto el broker deje de aceptar

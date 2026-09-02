@@ -85,18 +85,25 @@ de generar un evento nuevo.
 **Independent Test**: `quickstart.md` Escenario 3 — no depende de las demas historias
 (usa el `Detector` en memoria, sin persistencia todavia).
 
-- [ ] T008 [P] [US3] Tests unitarios en `tests/unit/test_detector.py`: una lectura aislada
+- [x] T008 [P] [US3] Tests unitarios en `tests/unit/test_detector.py`: una lectura aislada
       por encima del umbral no genera evento; 3 lecturas consecutivas si; el estado no
-      vuelve a NORMAL mientras el valor este dentro de la banda muerta del 5%.
-- [ ] T009 [US3] Agregar `lecturas_consecutivas` a `Detector._estado` y la constante
+      vuelve a NORMAL mientras el valor este dentro de la banda muerta del 5%. (se
+      reescribieron ademas los tests existentes que asumian alerta inmediata de una sola
+      lectura — ya no es el comportamiento vigente, ver D20/FR-004)
+- [x] T009 [US3] Agregar `lecturas_consecutivas` a `Detector._estado` y la constante
       `CONFIRMACION_LECTURAS = 3` (D20) — un evento nuevo solo se genera cuando el contador
       llega a ese valor; se resetea a 0 si una lectura no supera el umbral —
       `src/deteccion/detector.py`.
-- [ ] T010 [US3] Cambiar la condicion de vuelta a `NORMAL`: de `valor < valor_alerta` a
+- [x] T010 [US3] Cambiar la condicion de vuelta a `NORMAL`: de `valor < valor_alerta` a
       `valor < valor_alerta * 0.95` (banda muerta del 5%, D20) — `src/deteccion/detector.py`.
       (depende de T009, mismo bloque de codigo)
-- [ ] T011 [US3] Validar `quickstart.md` Escenario 3 (escenario D del emulador sin alertas,
-      escenario A con exactamente 1 alerta). (depende de T009, T010)
+- [x] T011 [US3] Validar `quickstart.md` Escenario 3 (escenario D del emulador sin alertas,
+      escenario A con exactamente 1 alerta). (depende de T009, T010) — validado con 3
+      semillas distintas del escenario D (0 alertas cada vez) + escenario A (exactamente 1
+      alerta, severidad ALERTA). Nota de diseno no anticipada en `plan.md`: una escalada
+      (ALERTA -> CRITICO) dispara de inmediato sin esperar 3 lecturas nuevas, porque el
+      contador de confirmacion sigue vivo mientras el equipo no vuelve a NORMAL — evita
+      retrasar una escalada real y mantiene verde el test existente de escalada.
 
 **Checkpoint**: deteccion filtra ruido, independiente del resto.
 
