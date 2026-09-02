@@ -8,7 +8,9 @@
 > causa/urgencia/accion) — es el comportamiento vigente en todo el pipeline. **D18**
 > (2026-09-02) conecto el RUT956 real por primera vez, publicando al Mosquitto local del
 > proyecto. **D19** (2026-09-02) abrio la spec `003-robustez-seguridad` a partir de una
-> auditoria real del codigo (7 hallazgos, ver `investigacion/handoff_spec_003_robustez.md`).
+> auditoria real del codigo (7 hallazgos, ver `investigacion/handoff_spec_003_robustez.md`);
+> **D20** resolvio las 9 `NEEDS CLARIFICATION` de esa spec. Ciclo SDD completo hasta
+> `tasks.md` (37 tareas, 6 historias) — falta la implementacion.
 >
 > Historial completo de sesiones anteriores (implementacion del MVP, bugs encontrados y
 > arreglados, feature 002, D13-D18) decantado en `memory/historico.md` en el barrido de stores
@@ -60,9 +62,10 @@ equipo.
 
 ## Git
 
-Local y remoto sincronizados en `7c76e47` (terminal `jbenitez`). La terminal `joelo` necesita
-`git pull` para traer `2db7cf7` y `7c76e47` (sesion del 2026-09-02: D18, simulador Modbus RTU,
-fix de terminologia, riesgo de migracion InfluxDB).
+Local y remoto sincronizados en `548de51` (terminal `jbenitez`). La terminal `joelo` necesita
+`git pull` para traer toda la sesion del 2026-09-02: `2db7cf7` (D18, simulador Modbus RTU),
+`7c76e47` (fix de terminologia, riesgo de migracion InfluxDB), `c3e43e2` (auditoria de stores
++ spec 003 / D19), `b264077` (D20 + plan.md), `548de51` (tasks.md).
 
 ---
 
