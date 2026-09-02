@@ -163,11 +163,19 @@ def obtener_alertas_previas(equipo_id: str, limite: int = 5) -> list[dict]:
 
 
 def crear_diagnostico(alerta_id: int, resultado: dict, fallo: bool = False) -> int:
+    """H5: `UPSERT` en vez de `INSERT` — un reintento (`diagnosticar_bajo_demanda` sobre un
+    registro con `fallo=1`) sobrescribe el diagnostico anterior en vez de violar la
+    restriccion `UNIQUE(alerta_id)` (data-model.md)."""
     with conexion() as conn:
         cursor = conn.execute(
             """INSERT INTO diagnostico
                (alerta_id, resumen_ejecutivo, hechos_destacados, generado_en, fallo)
-               VALUES (?, ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT(alerta_id) DO UPDATE SET
+                   resumen_ejecutivo = excluded.resumen_ejecutivo,
+                   hechos_destacados = excluded.hechos_destacados,
+                   generado_en = excluded.generado_en,
+                   fallo = excluded.fallo""",
             (
                 alerta_id,
                 resultado.get("resumen_ejecutivo"),

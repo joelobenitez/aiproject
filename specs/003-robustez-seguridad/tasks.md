@@ -219,20 +219,26 @@ simultaneos de la misma alerta generan una sola llamada a Claude.
 **Independent Test**: `quickstart.md` Escenario 6 — depende de la estructura de `main.py` de
 la Fase 1 (T003), pero no de Historia 3/4/5.
 
-- [ ] T027 [P] [US6] Test de integracion: forzar un fallo del nucleo de IA (mock), pedir el
+- [x] T027 [P] [US6] Test de integracion: forzar un fallo del nucleo de IA (mock), pedir el
       mismo `alerta_id` de nuevo, confirmar que reintenta y sobrescribe con un resultado
       exitoso — `tests/integration/test_diagnostico_bajo_demanda.py`.
-- [ ] T028 [P] [US6] Test de concurrencia: dos hilos llamando `diagnosticar_bajo_demanda`
+- [x] T028 [P] [US6] Test de concurrencia: dos hilos llamando `diagnosticar_bajo_demanda`
       para la misma alerta al mismo tiempo (con la llamada a Claude mockeada), confirmar una
       sola invocacion del mock y ninguna excepcion sin capturar — mismo archivo que T027.
-- [ ] T029 [US6] `crear_diagnostico` en `src/almacenamiento/sqlite_repo.py` pasa de `INSERT`
+- [x] T029 [US6] `crear_diagnostico` en `src/almacenamiento/sqlite_repo.py` pasa de `INSERT`
       a `INSERT ... ON CONFLICT(alerta_id) DO UPDATE SET ...` (ver `data-model.md`).
-- [ ] T030 [US6] `diagnosticar_bajo_demanda` en `src/main.py`: el chequeo de cache solo
+- [x] T030 [US6] `diagnosticar_bajo_demanda` en `src/main.py`: el chequeo de cache solo
       trata como "cacheado" un registro con `fallo = 0`; envolver el bloque
       check-cache/llamar-a-Claude/persistir en un `threading.Lock()` a nivel modulo
-      (`try/finally`). (depende de T029, y de la estructura de `main.py` de T003)
-- [ ] T031 [US6] Validar `quickstart.md` Escenario 6 (reintento exitoso, doble pedido
-      concurrente sin doble llamada). (depende de T029, T030)
+      (`try/finally`). (depende de T029, y de la estructura de `main.py` de T003) —
+      implementado con `with _lock_diagnostico:` (equivalente a `try/finally`, idiomatico).
+- [x] T031 [US6] Validar `quickstart.md` Escenario 6 (reintento exitoso, doble pedido
+      concurrente sin doble llamada). — validado en vivo contra el stack Docker real: se
+      simulo un diagnostico fallido para una alerta existente, `POST /diagnosticar` lo
+      reintento y sobreescribio la MISMA fila (mismo `id`, `fallo` 1->0, con una llamada real
+      a Claude); dos `POST /diagnosticar` concurrentes (`curl ... &` x2) sobre una alerta sin
+      diagnostico previo devolvieron el mismo contenido exacto (`cacheado: false` +
+      `cacheado: true`), confirmando una sola llamada real a Claude. (depende de T029, T030)
 
 **Checkpoint**: el endpoint bajo demanda es robusto a fallos transitorios y a concurrencia.
 

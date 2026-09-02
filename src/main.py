@@ -43,6 +43,11 @@ _cola: "queue.Queue[Lectura]" = queue.Queue(maxsize=1000)
 # atomicidad de la asignacion de referencias en Python (research.md).
 _ultima_lectura_en: Optional[str] = None
 
+# H6: serializa pedidos concurrentes a `diagnosticar_bajo_demanda` — un lock global unico
+# alcanza (volumen de un operador humano, no trafico alto), no hace falta un lock por
+# alerta_id (plan.md).
+_lock_diagnostico = threading.Lock()
+
 
 def configurar_logging() -> None:
     logging.basicConfig(
@@ -89,33 +94,38 @@ def _diagnosticar_y_notificar(
 def diagnosticar_bajo_demanda(alerta_id: int) -> dict:
     """D13: dispara (o recupera) el diagnostico de IA de una alerta puntual, a pedido.
 
-    Idempotente: si ya existe un diagnostico para esta alerta, lo devuelve sin volver a
-    llamar a Claude (evita pagar dos veces el mismo diagnostico).
+    Idempotente: si ya existe un diagnostico EXITOSO para esta alerta, lo devuelve sin volver
+    a llamar a Claude. Un diagnostico previo con `fallo=1` NO cuenta como cacheado — se
+    reintenta como si no existiera (H5). Todo el bloque (chequeo de cache + llamada a Claude +
+    persistencia) esta serializado por `_lock_diagnostico` (H6): dos pedidos concurrentes para
+    la misma alerta nunca disparan dos llamadas a Claude — el segundo espera al primero y
+    encuentra el resultado ya cacheado.
     """
-    alerta = sqlite_repo.obtener_alerta(alerta_id)
-    if alerta is None:
-        return {"error": "alerta_no_encontrada"}
+    with _lock_diagnostico:
+        alerta = sqlite_repo.obtener_alerta(alerta_id)
+        if alerta is None:
+            return {"error": "alerta_no_encontrada"}
 
-    existente = sqlite_repo.obtener_diagnostico(alerta_id)
-    if existente is not None:
-        existente["fallo"] = bool(existente["fallo"])
-        existente["hechos_destacados"] = json.loads(existente["hechos_destacados"] or "[]")
-        existente["cacheado"] = True
-        return existente
+        existente = sqlite_repo.obtener_diagnostico(alerta_id)
+        if existente is not None and not existente["fallo"]:
+            existente["fallo"] = bool(existente["fallo"])
+            existente["hechos_destacados"] = json.loads(existente["hechos_destacados"] or "[]")
+            existente["cacheado"] = True
+            return existente
 
-    equipo = sqlite_repo.obtener_equipo(alerta["equipo_id"])
-    umbral = umbrales.obtener(equipo["tipo_equipo"], alerta["variable_disparadora"])
-    resultado = _diagnosticar_y_notificar(
-        alerta_id,
-        alerta["equipo_id"],
-        alerta["variable_disparadora"],
-        alerta["valor"],
-        umbral["unidad"],
-        alerta["severidad"],
-        alerta["timestamp"],
-    )
-    resultado["cacheado"] = False
-    return resultado
+        equipo = sqlite_repo.obtener_equipo(alerta["equipo_id"])
+        umbral = umbrales.obtener(equipo["tipo_equipo"], alerta["variable_disparadora"])
+        resultado = _diagnosticar_y_notificar(
+            alerta_id,
+            alerta["equipo_id"],
+            alerta["variable_disparadora"],
+            alerta["valor"],
+            umbral["unidad"],
+            alerta["severidad"],
+            alerta["timestamp"],
+        )
+        resultado["cacheado"] = False
+        return resultado
 
 
 def _notificar(

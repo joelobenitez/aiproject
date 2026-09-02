@@ -117,8 +117,32 @@ anonimas (ya las deja de aceptar, D22 — el RUT956 real esta efectivamente desc
 T025). Comandos `/speckit-*` no instalados en esta terminal — seguir usando
 `.specify/scripts/powershell/*.ps1` + templates a mano (D19).
 
-**Proximo paso de codigo:** Fase 5 (US6, T027-T031 — reintento de diagnostico fallido +
-lock de concurrencia en `diagnosticar_bajo_demanda`), despues Polish (T032-T037).
+**Fase 5 (T027-T031, H5+H6) implementada y validada 2026-09-02:**
+- `src/almacenamiento/sqlite_repo.py`: `crear_diagnostico` pasa de `INSERT` a
+  `INSERT ... ON CONFLICT(alerta_id) DO UPDATE SET ...` — un reintento sobrescribe la misma
+  fila en vez de violar el `UNIQUE(alerta_id)`.
+- `src/main.py`: `diagnosticar_bajo_demanda` solo trata como "cacheado" un registro con
+  `fallo=0`; todo el bloque (chequeo de cache + llamada a Claude + persistencia) esta
+  serializado por `_lock_diagnostico` (lock global unico, no por `alerta_id` — volumen bajo,
+  plan.md).
+- Tests nuevos en `tests/integration/test_diagnostico_bajo_demanda.py` (reintento + 2 hilos
+  concurrentes con `parser.diagnosticar` mockeado con delay). 49/49 en verde.
+- Validado en vivo contra el stack real: diagnostico fallido simulado + `POST /diagnosticar`
+  lo reintento sobrescribiendo la misma fila (llamada real a Claude); dos `POST /diagnosticar`
+  concurrentes sobre una alerta sin diagnostico devolvieron el mismo contenido exacto
+  (`cacheado: false` + `cacheado: true`) — una sola llamada real a Claude.
+
+**Con esto, las 6 historias de usuario de la spec 003 estan implementadas.** Solo queda la
+Fase Final (Polish, T032-T037): correr la suite completa una vez mas, confirmar por lectura
+de codigo que los contratos no cambiaron (FR-014), documentar en `README.md` las variables de
+entorno nuevas y el cambio de puertos, registrar en `memory/risks.md` los hallazgos de esta
+implementacion que no estaban anticipados en `plan.md` (ya varios documentados: D21, D22, el
+cliente MQTT huerfano), validar `quickstart.md` completo de punta a punta, y confirmar que
+`data/aiproject.db` se recreo limpiamente con `detector_estado` (avisar a la terminal
+`joelo`, que va a necesitar el mismo paso).
+
+**Proximo paso de codigo:** Fase Final / Polish (T032-T037) — cierre de calidad, sin logica
+nueva.
 
 ---
 
