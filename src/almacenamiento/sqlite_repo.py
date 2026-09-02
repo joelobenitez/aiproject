@@ -4,6 +4,7 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 from src import config
 
@@ -43,6 +44,14 @@ CREATE TABLE IF NOT EXISTS diagnostico (
     hechos_destacados TEXT,
     generado_en TEXT NOT NULL,
     fallo INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS detector_estado (
+    equipo_id TEXT NOT NULL,
+    variable TEXT NOT NULL,
+    severidad TEXT NOT NULL,
+    cooldown_hasta TEXT,
+    PRIMARY KEY (equipo_id, variable)
 );
 """
 
@@ -168,3 +177,33 @@ def crear_diagnostico(alerta_id: int, resultado: dict, fallo: bool = False) -> i
             ),
         )
         return cursor.lastrowid
+
+
+def cargar_estado_detector() -> dict[tuple[str, str], dict]:
+    """H4 (data-model.md): estado persistido del detector, leido una sola vez al arrancar
+    el proceso (`Detector.__init__`). Devuelve `{}` si la tabla todavia no existe (proceso
+    nuevo que corrio antes de `inicializar_schema()`) en vez de fallar."""
+    try:
+        with conexion() as conn:
+            filas = conn.execute("SELECT equipo_id, variable, severidad, cooldown_hasta FROM detector_estado").fetchall()
+    except sqlite3.OperationalError:
+        return {}
+
+    return {
+        (fila["equipo_id"], fila["variable"]): {
+            "severidad": fila["severidad"],
+            "cooldown_hasta": datetime.fromisoformat(fila["cooldown_hasta"]) if fila["cooldown_hasta"] else None,
+        }
+        for fila in filas
+    }
+
+
+def guardar_estado_detector(equipo_id: str, variable: str, severidad: str, cooldown_hasta: Optional[datetime]) -> None:
+    """H4: se llama solo cuando `evaluar()` cambia severidad/cooldown de una clave, nunca por
+    cada lectura (Principio II)."""
+    with conexion() as conn:
+        conn.execute(
+            """INSERT OR REPLACE INTO detector_estado (equipo_id, variable, severidad, cooldown_hasta)
+               VALUES (?, ?, ?, ?)""",
+            (equipo_id, variable, severidad, cooldown_hasta.isoformat() if cooldown_hasta else None),
+        )

@@ -117,25 +117,42 @@ con el reloj desfasado no silencia el equipo indefinidamente.
 **Independent Test**: `quickstart.md` Escenario 4 — depende de que Historia 3 ya haya
 definido la forma de `Detector._estado` (T009), pero no de Historia 1/2/5/6.
 
-- [ ] T012 [P] [US4] Test unitario: instanciar un `Detector`, generar una alerta, crear un
+- [x] T012 [P] [US4] Test unitario: instanciar un `Detector`, generar una alerta, crear un
       `Detector` nuevo compartiendo el mismo `data/aiproject.db` y confirmar que hereda el
       cooldown del primero — `tests/unit/test_detector.py`.
-- [ ] T013 [P] [US4] Test unitario de skew: una lectura con timestamp adelantado mas de 5
+- [x] T013 [P] [US4] Test unitario de skew: una lectura con timestamp adelantado mas de 5
       minutos se evalua igual (no se descarta) usando el reloj del servidor para el
       cooldown, y queda un warning logueado — `tests/unit/test_detector.py`.
-- [ ] T014 [US4] Tabla `detector_estado` en `src/almacenamiento/sqlite_repo.py` (schema de
+- [x] T014 [US4] Tabla `detector_estado` en `src/almacenamiento/sqlite_repo.py` (schema de
       `data-model.md`) + funciones `cargar_estado_detector()` / `guardar_estado_detector(...)`.
-- [ ] T015 [US4] El punto donde `src/main.py` instancia `Detector` pasa a cargar el estado
+- [x] T015 [US4] El punto donde `src/main.py` instancia `Detector` pasa a cargar el estado
       inicial desde `cargar_estado_detector()`; cada cambio de estado dentro de `evaluar()`
       llama a `guardar_estado_detector(...)` — `src/deteccion/detector.py`,
-      `src/almacenamiento/sqlite_repo.py`. (depende de T009, T014)
-- [ ] T016 [US4] Validacion de skew: comparar el timestamp del payload contra
+      `src/almacenamiento/sqlite_repo.py`. (depende de T009, T014) — se instancia dentro de
+      `Detector.__init__` (carga) y `Detector._actualizar_estado` (graba solo si cambia
+      severidad/cooldown). `src/main.py` movio la creacion del `_detector` singleton de
+      import-time a `main()`, despues de `inicializar_schema()` (ver nota de riesgo abajo).
+- [x] T016 [US4] Validacion de skew: comparar el timestamp del payload contra
       `datetime.now(timezone.utc)`; si la diferencia absoluta supera 5 minutos (D20), usar el
       reloj del servidor para el calculo de `cooldown_hasta` y loguear un warning con ambos
       valores — `src/deteccion/detector.py`.
-- [ ] T017 [US4] Validar `quickstart.md` Escenario 4 (cooldown sobrevive a
+- [x] T017 [US4] Validar `quickstart.md` Escenario 4 (cooldown sobrevive a
       `docker compose restart servicio`; timestamp adelantado no silencia el equipo).
-      (depende de T015, T016)
+      (depende de T015, T016) — validado en vivo: alerta real generada con escenario A,
+      `docker compose restart servicio`, `detector_estado` confirmado intacto post-restart
+      (cooldown_hasta sin cambios); lectura con timestamp +3h logueo el warning de skew y
+      calculo `cooldown_hasta` a partir del reloj del servidor (verificado con match exacto
+      de segundos), no del timestamp adelantado.
+
+**Nota de riesgo no anticipada en `plan.md`:** `Detector.__init__` ahora lee SQLite
+(`cargar_estado_detector`), asi que ya no puede vivir a nivel de modulo en `src/main.py`
+(se creaba en el import, antes de `inicializar_schema()` — hubiera fallado o cargado un
+estado inconsistente). Se movio a `main()`. Para que los tests de integracion (que nunca
+llaman a `main()`) sigan teniendo un `_detector` valido y aislado por test, el fixture
+`entorno_aislado` ahora vive en `tests/conftest.py` (antes en `tests/integration/conftest.py`,
+invisible para `tests/unit/`) y reconstruye `servicio._detector` despues de inicializar el
+schema de la DB temporal — de paso corrige un problema de aislamiento preexistente (el
+`_detector` era un singleton compartido entre tests de todo el proceso de pytest).
 
 **Checkpoint**: cooldown persistente, independiente de Historia 1/2/5/6.
 

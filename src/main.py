@@ -28,7 +28,10 @@ from src.notificacion import telegram  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
-_detector = Detector()
+# H4/D21: no se instancia aca (import time) — Detector.__init__ ahora lee `detector_estado`
+# de SQLite, y a esta altura `sqlite_repo.inicializar_schema()` todavia no corrio. Se crea en
+# `main()`, despues del schema; en tests, el fixture `entorno_aislado` hace lo mismo.
+_detector: Optional[Detector] = None
 
 # H2: el callback MQTT solo normaliza y encola; todo el procesamiento (Influx, deteccion,
 # diagnostico/notificacion) corre en `_worker_loop`, en un hilo aparte, para que una llamada
@@ -210,9 +213,11 @@ def _al_recibir_mensaje(topico: str, payload: bytes) -> None:
 
 
 def main() -> None:
+    global _detector
     configurar_logging()
     logger.info("Inicializando esquema SQLite en %s", config.SQLITE_DB_PATH)
     sqlite_repo.inicializar_schema()
+    _detector = Detector()
 
     hilo_worker = threading.Thread(target=_worker_loop, daemon=True)
     hilo_worker.start()

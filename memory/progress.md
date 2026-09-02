@@ -65,10 +65,32 @@
 - Validado con el emulador real: escenario D con 3 semillas distintas -> 0 alertas cada vez;
   escenario A -> exactamente 1 alerta (severidad ALERTA).
 
-**Proximo paso:** Fase 3 (Historia 4, T012-T017 — cooldown persistido en SQLite +
-validacion de skew del reloj del sensor, `src/almacenamiento/sqlite_repo.py` +
-`src/deteccion/detector.py`). Fase 4 (US5, seguridad) tiene 2 tareas manuales que no son
-codigo: **T024**
+**Fase 3 (T012-T017, H4) implementada y validada 2026-09-02:**
+- `src/almacenamiento/sqlite_repo.py`: tabla `detector_estado` (PK equipo_id+variable) +
+  `cargar_estado_detector()` (tolera tabla inexistente, devuelve `{}`) /
+  `guardar_estado_detector(...)` (`INSERT OR REPLACE`).
+- `src/deteccion/detector.py`: `Detector.__init__` carga el estado persistido;
+  `_actualizar_estado()` graba solo cuando severidad/cooldown_hasta realmente cambian (no
+  por cada lectura). Validacion de skew (`SKEW_MAXIMO = 5 min`): timestamp desfasado no se
+  descarta, se reemplaza por el reloj del servidor (para cooldown Y para el resto de
+  `evaluar()`) y se loguea un warning.
+- **Hallazgo real no anticipado en `plan.md`:** `Detector()` ya no puede construirse a nivel
+  de modulo en `src/main.py` (import-time, antes de `inicializar_schema()`) porque ahora lee
+  SQLite en `__init__`. Se movio la construccion del `_detector` singleton a `main()`. Esto
+  exigio mover el fixture `entorno_aislado` de `tests/integration/conftest.py` a
+  `tests/conftest.py` (raiz) para que `tests/unit/test_detector.py` tambien pueda usarlo, y
+  de paso corrigio un problema de aislamiento de tests preexistente (`_detector` era un
+  singleton compartido entre TODOS los tests de la sesion de pytest, no solo dentro de un
+  archivo).
+- Validado en vivo: alerta real con escenario A, `docker compose restart servicio`,
+  `detector_estado` confirmado intacto (cooldown sin alterar); lectura con timestamp +3h
+  logueo el warning y calculo el cooldown con el reloj del servidor (verificado con match
+  exacto de segundos).
+- 47/47 tests en verde.
+
+**Proximo paso:** Fase 4 (US5, T018-T026 — seguridad: broker MQTT autenticado, token en el
+endpoint, puertos atados a `127.0.0.1`, password de Grafana sin default). Tiene 2 tareas
+manuales que no son codigo: **T024**
 rotar `ANTHROPIC_API_KEY` en `console.anthropic.com` (pendiente desde el 2026-09-01) y
 **T025** actualizar la config "Data to Server" del RUT956 con las credenciales MQTT nuevas
 (D18) — sin esto el router deja de poder publicar en cuanto el broker deje de aceptar

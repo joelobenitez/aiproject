@@ -9,19 +9,31 @@ genera despues de `CONFIRMACION_LECTURAS` lecturas consecutivas por encima del u
 vuelta a NORMAL exige bajar `BANDA_MUERTA` por debajo de `valor_alerta` (no alcanza con
 cruzar el umbral en sentido inverso). El contador de lecturas consecutivas es efimero (no se
 persiste, a diferencia de `severidad`/`cooldown_hasta` de H4).
+
+FR-005/FR-006 (H4, D20): `severidad`/`cooldown_hasta` por (equipo,variable) se persisten en
+SQLite (`detector_estado`, `data-model.md`) — se cargan una sola vez al construir el
+`Detector` y se graban solo cuando `evaluar()` cambia alguno de los dos (no en cada lectura,
+Principio II). Un timestamp de lectura desfasado mas de 5 minutos respecto del reloj del
+servidor no se descarta: se evalua igual, pero usando el reloj del servidor (no el del
+payload) para el calculo/comparacion de cooldown, y se loguea un warning.
 """
+import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from src import config
+from src.almacenamiento import sqlite_repo
 from src.deteccion import umbrales
+
+logger = logging.getLogger(__name__)
 
 NORMAL, ALERTA, CRITICO = "NORMAL", "ALERTA", "CRITICO"
 _ORDEN_SEVERIDAD = {NORMAL: 0, ALERTA: 1, CRITICO: 2}
 
 CONFIRMACION_LECTURAS = 3
 BANDA_MUERTA = 0.05
+SKEW_MAXIMO = timedelta(minutes=5)
 
 
 @dataclass
@@ -37,7 +49,10 @@ class EventoAlerta:
 class Detector:
     def __init__(self, cooldown_minutos: Optional[int] = None):
         self._cooldown = timedelta(minutes=cooldown_minutos if cooldown_minutos is not None else config.COOLDOWN_MINUTOS)
-        self._estado: dict[tuple[str, str], dict] = {}
+        self._estado: dict[tuple[str, str], dict] = {
+            clave: {**estado, "lecturas_consecutivas": 0}
+            for clave, estado in sqlite_repo.cargar_estado_detector().items()
+        }
 
     def evaluar(
         self, equipo_id: str, tipo_equipo: str, variable: str, valor: float, timestamp: datetime
@@ -45,6 +60,8 @@ class Detector:
         umbral = umbrales.obtener(tipo_equipo, variable)
         if umbral is None:
             return None
+
+        timestamp = self._resolver_skew(timestamp)
 
         clasificacion = self._clasificar(valor, umbral)
         clave = (equipo_id, variable)
@@ -56,9 +73,10 @@ class Detector:
             # sentido inverso — evita reactivar/desactivar en cada lectura ruidosa.
             en_banda_muerta = estado["severidad"] != NORMAL and valor >= umbral["valor_alerta"] * (1 - BANDA_MUERTA)
             if en_banda_muerta:
-                self._estado[clave] = {**estado, "lecturas_consecutivas": 0}
+                nuevo_estado = {**estado, "lecturas_consecutivas": 0}
             else:
-                self._estado[clave] = {"severidad": NORMAL, "cooldown_hasta": None, "lecturas_consecutivas": 0}
+                nuevo_estado = {"severidad": NORMAL, "cooldown_hasta": None, "lecturas_consecutivas": 0}
+            self._actualizar_estado(equipo_id, variable, estado, nuevo_estado)
             return None
 
         lecturas_consecutivas = estado["lecturas_consecutivas"] + 1
@@ -71,18 +89,19 @@ class Detector:
         # Confirmacion por lecturas consecutivas (FR-004): recien alcanzado el umbral, hace
         # falta sostenerlo `CONFIRMACION_LECTURAS` veces seguidas antes de generar un evento.
         if lecturas_consecutivas < CONFIRMACION_LECTURAS:
-            self._estado[clave] = {**estado, "lecturas_consecutivas": lecturas_consecutivas}
+            self._actualizar_estado(equipo_id, variable, estado, {**estado, "lecturas_consecutivas": lecturas_consecutivas})
             return None
 
         if en_cooldown and not es_escalada:
-            self._estado[clave] = {**estado, "lecturas_consecutivas": lecturas_consecutivas}
+            self._actualizar_estado(equipo_id, variable, estado, {**estado, "lecturas_consecutivas": lecturas_consecutivas})
             return None
 
-        self._estado[clave] = {
+        nuevo_estado = {
             "severidad": clasificacion,
             "cooldown_hasta": timestamp + self._cooldown,
             "lecturas_consecutivas": lecturas_consecutivas,
         }
+        self._actualizar_estado(equipo_id, variable, estado, nuevo_estado)
 
         return EventoAlerta(
             equipo_id=equipo_id,
@@ -92,6 +111,30 @@ class Detector:
             timestamp=timestamp,
             es_escalada=es_escalada,
         )
+
+    def _actualizar_estado(self, equipo_id: str, variable: str, estado_anterior: dict, estado_nuevo: dict) -> None:
+        clave = (equipo_id, variable)
+        self._estado[clave] = estado_nuevo
+        if (estado_anterior["severidad"], estado_anterior["cooldown_hasta"]) == (
+            estado_nuevo["severidad"],
+            estado_nuevo["cooldown_hasta"],
+        ):
+            return
+        sqlite_repo.guardar_estado_detector(equipo_id, variable, estado_nuevo["severidad"], estado_nuevo["cooldown_hasta"])
+
+    @staticmethod
+    def _resolver_skew(timestamp: datetime) -> datetime:
+        ahora = datetime.now(timezone.utc)
+        if abs((timestamp - ahora).total_seconds()) <= SKEW_MAXIMO.total_seconds():
+            return timestamp
+        logger.warning(
+            "Timestamp de lectura desfasado mas de %s respecto del reloj del servidor "
+            "(payload=%s, servidor=%s) — se usa el reloj del servidor para el cooldown",
+            SKEW_MAXIMO,
+            timestamp.isoformat(),
+            ahora.isoformat(),
+        )
+        return ahora
 
     @staticmethod
     def _clasificar(valor: float, umbral: dict) -> str:
