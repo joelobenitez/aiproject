@@ -126,14 +126,15 @@ equipo.
 
 ## Git
 
-Local y remoto sincronizados en `f8ee9a2` (terminal `jbenitez`). La terminal `joelo` necesita
+Local en `c8cb424` (terminal `jbenitez`), pendiente de push. La terminal `joelo` necesita
 `git pull` para traer toda la sesion del 2026-09-02: `2db7cf7` (D18, simulador Modbus RTU),
 `7c76e47` (fix de terminologia, riesgo de migracion InfluxDB), `c3e43e2` (auditoria de stores
 + spec 003 / D19), `b264077` (D20 + plan.md), `548de51` (tasks.md), `fa950e7` (cierre de
 sesion), `49c2eee` (Fase 1 de la spec 003 + D21 — **ojo**: cambia el entrypoint a
 `python -m src`, actualizar cualquier script/alias local que todavia invoque
-`python src/main.py` directo), `0e4a628` (progress.md), `f8ee9a2` (Fase 2 de la spec 003 —
-banda muerta + confirmacion por lecturas, H3).
+`python src/main.py` directo), `0e4a628` (progress.md), `f8ee9a2` (Fase 2 — banda muerta +
+confirmacion por lecturas, H3), `b8f3f96` (progress.md), `c8cb424` (Fase 3 — cooldown
+persistido + skew, H4 — **ojo**: movio `tests/integration/conftest.py` a `tests/conftest.py`).
 
 ---
 
