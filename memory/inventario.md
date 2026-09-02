@@ -54,6 +54,13 @@ tabla "Jubilados (obs/)" (D14).
 | Spec Kit — artefactos del feature 001 | `obs/specs/001-diagnostico-motor-industrial/` (spec.md, plan.md, tasks.md, research.md, quickstart.md, data-model.md, contracts/, checklists/) | Ciclo SDD completo y cerrado del MVP (38/38 tareas). Incluye los contratos de datos originales (MQTT payload, schema InfluxDB, contrato interno del servicio) | Jubilado 2026-09-01 (D14) — registro historico constructivo. `src/` es la fuente de verdad viva del codigo/contratos implementados; este archivo se consulta solo si hace falta el detalle de diseno original o el razonamiento del spec/plan de esa etapa. No se migro contenido a otro lado para no duplicar. |
 | Spec Kit — artefactos del feature 002 | `obs/specs/002-grafana-llm-diagnostico/` (spec.md, plan.md, tasks.md, research.md, data-model.md, quickstart.md, contracts/) | Ciclo SDD completo y cerrado del plugin LLM de Grafana + panel de diagnostico (13/13 tareas, D15). Incluye la investigacion real del schema del plugin y el bug del modelo default encontrado/arreglado | Jubilado 2026-09-01 (D16) — mismo criterio que D14. `src/`, `grafana/provisioning/` y `docker-compose.yml` son la fuente de verdad viva. No se agrega mas superficie de IA en Grafana (confirmado con Joelo tras el cierre del feature). |
 
+## Herramientas de prueba (no forman parte del sistema)
+
+| Artefacto | Ubicacion | Contenido | Estado |
+|---|---|---|---|
+| Emulador de motor (MQTT directo) | `herramientas/emulador_motor.py` | Publica los 4 escenarios A-D directo por MQTT, sin pasar por el RUT956 | Validado, en uso desde el MVP |
+| Simulador Modbus RTU (via RS485) | `herramientas/simulador_modbus_rtu.py` | Expone un esclavo Modbus RTU (holding registers x10, reutiliza los escenarios A-D del emulador) por un puerto serie/USB-RS485, para que el RUT956 lo lea como si fuera un sensor real (D11, D18) | Escrito y probado en seco (2026-09-02) — sin validar contra hardware real, falta el adaptador USB-RS485 |
+
 ## Infraestructura
 
 | Artefacto | Ubicacion | Contenido | Estado |

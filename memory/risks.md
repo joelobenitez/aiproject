@@ -241,3 +241,22 @@ en vez de un `up -d` simple. Si hay dudas sobre un contenedor puntual, comparar 
 adentro (`docker compose exec -T <servicio> grep -n "<algo del codigo actual>"
 /app/<archivo>`, con `MSYS_NO_PATHCONV=1` delante si se corre desde Git Bash en Windows para
 que no traduzca la ruta `/app/...`) contra el archivo real en disco.
+
+---
+
+## `pymodbus` >=3.8 reescribio el datastore sobre el motor de simulador — rompe la API clasica
+
+**Area que protege:** `herramientas/simulador_modbus_rtu.py` y `requirements.txt`
+(`pymodbus[serial]==3.7.4`, pin deliberado).
+
+**Detalle:** se probo empiricamente (2026-09-02) instalando la ultima version (3.15.0):
+`ModbusSlaveContext` ya no existe (renombrado `ModbusDeviceContext`), y
+`ModbusSequentialDataBlock` paso a delegar en `pymodbus.simulator.simdata.SimData` con reglas
+de direccionamiento distintas (`address - 1`, chequeo `0 <= address < 65535`) — no es un
+cambio menor de firma, es una arquitectura interna nueva. La 3.7.4 todavia tiene la API
+clasica documentada en la mayoria de ejemplos/tutoriales (`ModbusSlaveContext(hr=...)`,
+`ModbusServerContext(slaves={id: ctx}, single=False)`, `bloque.setValues(address, values)`).
+
+**No romper:** no correr `pip install -U pymodbus` (ni quitar el pin de `requirements.txt`)
+sin releer la API nueva primero — el codigo actual de `simulador_modbus_rtu.py` asume la API
+clasica de 3.7.x y va a fallar con `ImportError`/`TypeError` contra 3.8+.

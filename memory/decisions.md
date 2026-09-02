@@ -558,3 +558,37 @@ comportamiento viejo para que el contrato del proyecto siga siendo preciso.
   reconciliados) ni `investigacion/sistema_src_funcionamiento_detallado.md` (doc de estudio
   para NotebookLM escrito el mismo dia, queda desactualizado en las secciones que describen
   el diagnostico viejo hasta que se regenere aparte).
+
+---
+
+## D18 — El RUT956 publica al Mosquitto local del proyecto, no a un broker cloud externo
+
+**Fecha:** 2026-09-02
+**Quien decidio:** Joelo + Claude Code
+
+**Decision:** la coleccion "Data to Server" del RUT956 (`Rut_Mqtt`) se reconfiguro para
+publicar al Mosquitto de `docker-compose.yml` (IP LAN de la PC, `192.168.1.195:1883`, sin
+TLS, sin credenciales — coherente con `allow_anonymous true` de `mosquitto/mosquitto.conf`)
+en vez del broker EMQX Cloud externo (`ka819ef9.ala.us-east-1.emqxsl.com:8883`, TLS +
+credenciales) al que ya venia apuntando de una configuracion previa no documentada. Se dejo
+el periodo de publicacion en 60s (se probo en 15s para la validacion, se subio despues para
+no floodear).
+
+**Por que:** validar el tramo real de arquitectura que faltaba probar (RUT956 -> broker del
+proyecto) sin depender de un servicio cloud de terceros ni de sensores reales todavia (D11
+sigue bloqueado por falta del adaptador USB-RS485). Mantener el gateway dentro del mismo
+broker que usa el resto del stack es ademas coherente con la arquitectura definida en
+`CLAUDE.md` (EMQX/Mosquitto como broker central unico).
+
+**Alcance:**
+- Prueba de conectividad confirmada de punta a punta: `mosquitto_sub` contra
+  `aiproject-broker` recibio mensajes reales del router en el topico de prueba
+  `rut956/prueba_conectividad`. El firewall de Windows no bloqueo la conexion — no hizo
+  falta abrir el puerto 1883 manualmente.
+- El payload que arma "Data to Server" (`{"GPS": {...}, "input1": [...]}`) es el formato
+  propio de Teltonika, **no** el contrato `{valor, unidad, timestamp}` por topico de variable
+  que espera `src/ingesta` — no hay integracion con el pipeline de deteccion/diagnostico
+  todavia. Normalizar ese mapeo queda pendiente para cuando haya datos reales via Modbus
+  RTU/RS485 (D11).
+- El dato publicado hoy sigue siendo el auto-sondeo Modbus TCP del router sobre si mismo
+  (ver `input1` en la config, definido antes de esta sesion) mas GPS — no es un sensor real.

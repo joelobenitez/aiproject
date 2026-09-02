@@ -1,6 +1,6 @@
 # Progress — aiproject
 
-> **Ultima actualizacion:** 2026-09-01
+> **Ultima actualizacion:** 2026-09-02
 > **Donde estamos:** MVP del feature `001-diagnostico-motor-industrial` IMPLEMENTADO,
 > VALIDADO EN DOCKER REAL CON PIPELINE COMPLETO END-TO-END: MQTT → deteccion → **Claude
 > real** → **Telegram real** → **Grafana con anotaciones reales**, sin fallos. Los 5 items
@@ -179,6 +179,44 @@
 > 11.1, 11.2, 13, 16 y 18 reescritas, incluyendo un ejemplo real de contexto/respuesta
 > capturado en vivo post-D17 y una comparacion directa contra el ejemplo pre-D17 que el doc
 > tenia originalmente. Commiteado y pusheado como `fd06a4b`.
+> **2026-09-02 (sesion nueva, terminal `jbenitez`):** `git pull` trajo `079633d`, `8d72852` y
+> `fd06a4b` (D17 completo) — fast-forward limpio. Se accedio por primera vez a la interfaz web
+> real del RUT956 (bloqueador de la sesion anterior resuelto: hardware conectado, credenciales
+> confirmadas). Relevamiento (solo lectura, sin guardar cambios) encontro configuracion previa
+> no documentada: un Modbus TCP Client que se auto-consulta a si mismo (`192.168.1.1:502`,
+> lee su propio numero de serie) y una coleccion "Data to Server" (`Rut_Mqtt`) publicando cada
+> 120s a un broker EMQX Cloud externo (`ka819ef9.ala.us-east-1.emqxsl.com:8883`, TLS) — ninguno
+> de los dos toca RS485 ni un sensor real todavia. Se investigo y guardo (como referencia en la
+> memoria del asistente, no en este repo) la bibliografia oficial de Teltonika sobre las APIs
+> del RUT956 (RutOS Web API nueva, JSON-RPC legacy, Modbus, MQTT) y el acceso SSH, para usar
+> cuando se automatice/configure el equipo — dejando en claro que esas APIs son para
+> **configurar** el gateway, no para publicar telemetria de sensores.
+>
+> Joelo pidio arrancar pruebas del RUT956 sin sensores todavia: se escribio
+> `herramientas/simulador_modbus_rtu.py`, un esclavo Modbus RTU (holding registers x10,
+> reutiliza los escenarios A-D de `emulador_motor.py`) pensado para correr contra un
+> adaptador USB-RS485 y que el RUT956 lo lea como si fuera el motor real. Se fijo
+> `pymodbus[serial]==3.7.4` en `requirements.txt` a proposito (`pymodbus` 3.8+ reescribio el
+> datastore sobre un motor de simulador nuevo e incompatible, confirmado empiricamente — ver
+> riesgo nuevo en `memory/risks.md`). El script se probo en seco (arma el contexto Modbus sin
+> errores, solo falla al abrir un puerto COM inexistente, como se esperaba) pero **no contra
+> hardware real** — Joelo todavia no tiene el adaptador USB-RS485, ese frente queda en pausa.
+>
+> Con el RS485 en pausa pero el RUT956 ya conectado por USB-Ethernet (IP de la PC en la red
+> del router: `192.168.1.195`), se avanzo igual con una prueba que no depende de RS485: se
+> reconstruyo el stack Docker (`docker compose up -d --build`, necesario para que esta maquina
+> tome el codigo post-D17) y se reconfiguro "Data to Server" del RUT956 para publicar al
+> **Mosquitto local** del proyecto (no EMQX — correccion de terminologia, el broker real desde
+> D9 es `eclipse-mosquitto`) en vez del cloud externo — **D18**. Validado de punta a punta con
+> `mosquitto_sub` dentro de `aiproject-broker`: el RUT956 publico correctamente en el topico de
+> prueba `rut956/prueba_conectividad`, sin que el firewall de Windows bloqueara nada (no hizo
+> falta abrir el puerto 1883 manualmente). Periodo ajustado a 60s. El payload de "Data to
+> Server" (formato propio de Teltonika) todavia no coincide con el contrato que espera
+> `src/ingesta` — normalizar ese mapeo queda pendiente para cuando haya datos reales via
+> Modbus RTU/RS485. Cambios de esta sesion (`requirements.txt`,
+> `herramientas/simulador_modbus_rtu.py` nuevo, los 4 stores de memoria) commiteados y
+> pusheados al cierre — Joelo confirmo incluir el codigo aunque todavia no se probo contra
+> hardware real (el script ya se valido en seco).
 
 ---
 
@@ -211,20 +249,25 @@ Ninguno bloqueante. Ver "Pendientes sueltos" abajo para lo que falta cerrar.
 
 ## Proximos pasos
 
-**Foco de la proxima sesion:** seguir con la integracion del **Teltonika RUT956** (D11
-roadmap — reemplazar el emulador Python por el gateway real hablando Modbus RTU/RS485 con
-sensores reales, publicando por su cliente MQTT nativo con la misma estructura de topicos).
-Hardware confirmado en mano y conectado por Ethernet (2026-09-01), pero **bloqueado en el
-primer paso**: Joelo no pudo acceder a la interfaz web del equipo en `http://192.168.1.1`.
-Falta diagnosticar la causa (revisar a que puerto fisico del RUT956 esta conectado el cable
-— LAN vs. WAN —, si la PC tomo IP por DHCP en el rango `192.168.1.x`, y que error especifico
-tira el navegador: timeout, conexion rechazada, u otro). Ver `CLAUDE.md` (seccion Hardware
-Confirmado) y D11 en `memory/decisions.md` para el contexto tecnico ya definido.
+**Foco de la proxima sesion:** cuando Joelo consiga el adaptador **USB-RS485**, retomar la
+integracion del RUT956 (D11/D18) con el simulador ya escrito
+(`herramientas/simulador_modbus_rtu.py`):
+1. Cablear A/B del adaptador a los terminales RS485 del router (revisar etiquetado fisico del
+   conector, no confirmado todavia).
+2. Anotar el puerto COM que Windows le asigna al adaptador.
+3. En el RUT956: habilitar el puerto fisico en modo RS485 (probablemente en "Serial
+   Utilities" — no confirmado en vivo todavia) y agregar una instancia de **Modbus Serial
+   Client** (id de esclavo 1, mismo baudrate que el script).
+4. Correr `python herramientas/simulador_modbus_rtu.py --puerto COM<X>` y confirmar que sube
+   el contador de "successful requests" del cliente.
+5. Una vez ahi, mapear el payload de "Data to Server" (formato propio de Teltonico, ver D18)
+   al contrato que espera `src/ingesta` para integrar de verdad con el pipeline de
+   deteccion/diagnostico — hoy solo llegan datos de auto-sondeo/GPS, no del "motor".
 
-**Git:** local y remoto sincronizados en `fd06a4b` al cierre de esta sesion (terminal
-`joelo`). La terminal `jbenitez` quedo en `211c1dd` — al retomar ahi hace falta `git pull`
-para traer `079633d`, `8d72852` y `fd06a4b` (la sesion de hoy: riesgo de contenedores Docker
-viejos + D17 completo).
+**Git:** local y remoto sincronizados en `fd06a4b` al inicio de esta sesion (terminal
+`jbenitez`, via `git pull`). Los cambios de hoy (codigo + memoria) se commitean y pushean al
+cierre — la terminal `joelo` va a necesitar `git pull` para traerlos de vuelta la proxima vez
+que se retome ahi.
 
 **Anotado como trabajo futuro (no urgente, sin fecha):** escalar la infraestructura de
 Telegram a **Nivel 1** (ver D2 en `memory/decisions.md` y el "camino natural siguiente" de
