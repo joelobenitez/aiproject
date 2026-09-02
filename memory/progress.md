@@ -88,14 +88,37 @@
   exacto de segundos).
 - 47/47 tests en verde.
 
-**Proximo paso:** Fase 4 (US5, T018-T026 — seguridad: broker MQTT autenticado, token en el
-endpoint, puertos atados a `127.0.0.1`, password de Grafana sin default). Tiene 2 tareas
-manuales que no son codigo: **T024**
-rotar `ANTHROPIC_API_KEY` en `console.anthropic.com` (pendiente desde el 2026-09-01) y
-**T025** actualizar la config "Data to Server" del RUT956 con las credenciales MQTT nuevas
-(D18) — sin esto el router deja de poder publicar en cuanto el broker deje de aceptar
-conexiones anonimas. Comandos `/speckit-*` no instalados en esta terminal — seguir usando
+**Fase 4 (T018-T023, T026, H7) implementada y validada 2026-09-02 — quedan solo T024/T025 (manuales):**
+- `src/config.py` + `.env.example`: `MQTT_USERNAME`/`MQTT_PASSWORD`, `API_TOKEN`,
+  `GRAFANA_ADMIN_PASSWORD` (sin fallback inseguro).
+- Broker: `allow_anonymous false` + `password_file` + `acl_file` (una unica credencial
+  compartida servicio+emulador, `readwrite` en el namespace del motor). `mqtt_client.py` y
+  `emulador_motor.py` llaman `username_pw_set(...)`.
+- **D22** (hallazgo real): `mosquitto/passwd` termino copiandose al build
+  (`mosquitto/Dockerfile` nuevo, `broker` pasa de `image:` a `build: ./mosquitto`) en vez de
+  bind-mount — Windows/Docker Desktop no preserva el permiso 600 que mosquitto exige, el
+  broker moria en el arranque (`Unable to open pwfile`). Ver riesgo nuevo en `memory/risks.md`.
+- `src/api.py`: `POST /diagnosticar` exige header `X-API-Token` (comparacion en tiempo
+  constante, fail-closed si `API_TOKEN` no esta configurado). `GET /health` sin cambios.
+- `docker-compose.yml`: `servicio`/`influxdb` bindeados a `127.0.0.1`; `1883`/`3000` siguen
+  en la LAN; Grafana sin password default.
+- Validado en vivo contra el stack real: broker rechazo un cliente MQTT ajeno sin
+  credenciales (ver riesgo nuevo — parece ser una herramienta de Joelo en la LAN, pendiente
+  identificar y actualizar); `POST /diagnosticar` sin/con-token-incorrecto -> 401, con token
+  correcto -> 200 (llamada real a Claude); puertos confirmados con `docker port`; Grafana
+  arranco sano con password nueva. 47/47 tests en verde (sin tests nuevos automatizados en
+  esta fase — es config/infra, validada por quickstart, mismo criterio que plan.md).
+
+**Pendiente antes de cerrar Fase 4 del todo (manuales, no codigo):** **T024** rotar
+`ANTHROPIC_API_KEY` en `console.anthropic.com` (pendiente desde el 2026-09-01) y **T025**
+actualizar la config "Data to Server" del RUT956 con las credenciales MQTT nuevas (D18) — sin
+esto el router deja de poder publicar en cuanto el broker deje de aceptar conexiones
+anonimas (ya las deja de aceptar, D22 — el RUT956 real esta efectivamente desconectado hasta
+T025). Comandos `/speckit-*` no instalados en esta terminal — seguir usando
 `.specify/scripts/powershell/*.ps1` + templates a mano (D19).
+
+**Proximo paso de codigo:** Fase 5 (US6, T027-T031 — reintento de diagnostico fallido +
+lock de concurrencia en `diagnosticar_bajo_demanda`), despues Polish (T032-T037).
 
 ---
 

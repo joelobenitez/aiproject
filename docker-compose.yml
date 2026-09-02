@@ -1,11 +1,9 @@
 services:
   broker:
-    image: eclipse-mosquitto:2
+    build: ./mosquitto
     container_name: aiproject-broker
     ports:
       - "1883:1883"
-    volumes:
-      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
     networks:
       - iot-net
 
@@ -13,7 +11,7 @@ services:
     image: influxdb:2
     container_name: aiproject-influxdb
     ports:
-      - "8086:8086"
+      - "127.0.0.1:8086:8086"
     environment:
       DOCKER_INFLUXDB_INIT_MODE: setup
       DOCKER_INFLUXDB_INIT_USERNAME: admin
@@ -40,7 +38,7 @@ services:
       MQTT_HOST: broker
       INFLUX_URL: http://influxdb:8086
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./data:/app/data
     networks:
@@ -54,7 +52,9 @@ services:
     env_file:
       - .env
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      # FR-012: sin fallback inseguro — si GRAFANA_ADMIN_PASSWORD no esta en .env, Grafana
+      # arranca con la variable vacia (falla visible en vez de un default silencioso).
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
       INFLUX_URL: http://influxdb:8086
       # Plugin LLM oficial (feature 002) — version pinneada, no ':latest' (research.md T001)
       GF_INSTALL_PLUGINS: "grafana-llm-app 1.0.8"

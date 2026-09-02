@@ -15,6 +15,9 @@ node_modules/
 .env.*
 !.env.example
 
+# Mosquitto: hash bcrypt, pero fuera de git por prudencia (mismo criterio que .env, D20/T019)
+mosquitto/passwd
+
 # Datos de runtime (SQLite del MVP, D9)
 data/
 

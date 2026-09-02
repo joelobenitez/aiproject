@@ -30,5 +30,8 @@ def crear_cliente(al_recibir_mensaje: Callable[[str, bytes], None]) -> mqtt.Clie
     cliente.on_message = _on_message
     cliente.on_disconnect = _on_disconnect
 
+    if config.MQTT_USERNAME:
+        cliente.username_pw_set(config.MQTT_USERNAME, config.MQTT_PASSWORD)
+
     cliente.connect(config.MQTT_HOST, config.MQTT_PORT)
     return cliente

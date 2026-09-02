@@ -33,8 +33,18 @@ secretos de produccion (pendiente, ver `memory/risks.md`).
 
 ## Levantar el stack
 
+El broker MQTT requiere credenciales (D20/FR-009) — generar `mosquitto/passwd` una vez antes
+del primer build (el archivo esta en `.gitignore`, no viaja con el repo, D22):
+
 ```bash
-docker compose up -d broker influxdb
+docker run --rm -v "$(pwd)/mosquitto:/mosquitto/config" eclipse-mosquitto:2 \
+  mosquitto_passwd -b -c /mosquitto/config/passwd <usuario> <password>
+```
+
+Completar `MQTT_USERNAME`/`MQTT_PASSWORD` en `.env` con ese mismo usuario/password.
+
+```bash
+docker compose up -d --build broker influxdb
 python -m src &
 python herramientas/emulador_motor.py
 ```

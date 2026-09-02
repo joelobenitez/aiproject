@@ -82,6 +82,8 @@ def _publicar(cliente: mqtt.Client, variable: str, valor: float) -> None:
 def correr(escenario: str, ticks: int, intervalo: float) -> None:
     generar = _ESCENARIOS[escenario]
     cliente = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    if config.MQTT_USERNAME:
+        cliente.username_pw_set(config.MQTT_USERNAME, config.MQTT_PASSWORD)
     cliente.connect(config.MQTT_HOST, config.MQTT_PORT)
     cliente.loop_start()
 

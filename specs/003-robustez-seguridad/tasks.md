@@ -166,21 +166,25 @@ schema de la DB temporal — de paso corrige un problema de aislamiento preexist
 **Independent Test**: `quickstart.md` Escenario 5 — independiente en codigo del resto de las
 historias (toca config/infra, no la logica de deteccion/persistencia).
 
-- [ ] T018 [P] [US5] Agregar `MQTT_USERNAME`, `MQTT_PASSWORD`, `API_TOKEN` a
+- [x] T018 [P] [US5] Agregar `MQTT_USERNAME`, `MQTT_PASSWORD`, `API_TOKEN` a
       `src/config.py`, con placeholders nuevos en `.env.example`.
-- [ ] T019 [P] [US5] Generar `mosquitto/passwd` (`mosquitto_passwd -c`, hash — no texto
-      plano) y `mosquitto/acl.conf` (credencial del RUT956/emulador: `write` en
-      `demo/planta1/linea_a/motor_001/#`; credencial del `servicio`: `read` en el mismo
-      namespace); actualizar `mosquitto/mosquitto.conf` (`allow_anonymous false`,
-      `password_file`, `acl_file`).
-- [ ] T020 [US5] `src/ingesta/mqtt_client.py`: `client.username_pw_set(...)` antes de
+- [x] T019 [P] [US5] Generar `mosquitto/passwd` (`mosquitto_passwd -c`, hash — no texto
+      plano) y `mosquitto/acl.conf` (una unica credencial compartida servicio+emulador,
+      `readwrite` en `demo/planta1/linea_a/motor_001/#`, ver plan.md); actualizar
+      `mosquitto/mosquitto.conf` (`allow_anonymous false`, `password_file`, `acl_file`). Ver
+      D22: `mosquitto/passwd` termino copiandose al build (`mosquitto/Dockerfile` nuevo) en
+      vez de bind-mount — el bind-mount desde Windows/Docker Desktop no preservaba el
+      permiso 600 que mosquitto exige, el broker moria en el arranque.
+- [x] T020 [US5] `src/ingesta/mqtt_client.py`: `client.username_pw_set(...)` antes de
       conectar, usando `config.MQTT_USERNAME`/`MQTT_PASSWORD`. (depende de T018, T019)
-- [ ] T021 [P] [US5] `herramientas/emulador_motor.py`: mismo `username_pw_set` para seguir
+- [x] T021 [P] [US5] `herramientas/emulador_motor.py`: mismo `username_pw_set` para seguir
       probando localmente contra el broker autenticado. (depende de T018, T019)
-- [ ] T022 [US5] `src/api.py`: `do_POST` valida un header (`X-API-Token`) contra
+- [x] T022 [US5] `src/api.py`: `do_POST` valida un header (`X-API-Token`) contra
       `config.API_TOKEN` antes de llamar a `diagnosticar_bajo_demanda`; responde 401 si
-      falta o no coincide. `GET /health` no cambia. (depende de T018)
-- [ ] T023 [US5] `docker-compose.yml`: `servicio` pasa de `"8000:8000"` a
+      falta o no coincide. `GET /health` no cambia. (depende de T018) — comparacion en
+      tiempo constante (`hmac.compare_digest`) y fail-closed si `API_TOKEN` no esta
+      configurado (rechaza todo en vez de aceptar cualquier pedido sin header).
+- [x] T023 [US5] `docker-compose.yml`: `servicio` pasa de `"8000:8000"` a
       `"127.0.0.1:8000:8000"`; `influxdb` de `"8086:8086"` a `"127.0.0.1:8086:8086"`; sacar
       el fallback `:-admin` de `GF_SECURITY_ADMIN_PASSWORD`.
 - [ ] T024 [US5] [manual] Rotar `ANTHROPIC_API_KEY` en `console.anthropic.com` (pendiente
@@ -188,9 +192,18 @@ historias (toca config/infra, no la logica de deteccion/persistencia).
 - [ ] T025 [US5] [manual] Actualizar la coleccion "Data to Server" del RUT956 (D18) con las
       credenciales MQTT nuevas de T019 — sin este paso el router deja de poder publicar en
       cuanto el broker deje de aceptar conexiones anonimas.
-- [ ] T026 [US5] Validar `quickstart.md` Escenario 5 completo (broker rechaza sin
+- [x] T026 [US5] Validar `quickstart.md` Escenario 5 completo (broker rechaza sin
       credenciales, endpoint responde 401 sin token, puertos confirmados en `127.0.0.1`,
-      key vieja revocada). (depende de T020-T025)
+      key vieja revocada). (depende de T020-T025) — validado en vivo salvo la rotacion de
+      key (T024, todavia pendiente): un cliente MQTT real sin credenciales (ajeno a esta
+      sesion, corriendo en la LAN de Joelo) fue rechazado en loop por el broker
+      ("not authorised") durante toda la validacion; `POST /diagnosticar` sin token y con
+      token incorrecto -> 401, con token correcto -> 200 (llamada real a Claude); `/health`
+      sigue sin requerir token; `docker port` confirmo `8000`/`8086` solo en `127.0.0.1` y
+      `1883`/`3000` siguen expuestos a la LAN (D20); Grafana arranco sano con la password
+      nueva (sin fallback inseguro). **Pendiente para Joelo**: el cliente MQTT que quedo
+      rechazándose en loop parece ser una herramienta propia (MQTT Explorer/similar) en la
+      LAN — actualizarle las credenciales nuevas cuando se identifique cual es.
 
 **Checkpoint**: superficie de seguridad cerrada. Los pasos T024/T025 son manuales — no hay
 test automatizado posible para "la key vieja fue revocada" ni para "el RUT956 tiene las

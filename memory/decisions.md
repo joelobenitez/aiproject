@@ -746,3 +746,32 @@ reutiliza `api.py` al importarlo, porque Python cachea el modulo en `sys.modules
 **Alcance:** solo cambia como se invoca el proceso (`Dockerfile`, `README.md`); ningun
 contrato de datos ni de red cambia (FR-014). Se dejo un comentario en `src/main.py` y en
 `src/__main__.py` para que nadie reintroduzca el problema ejecutando el archivo directo.
+
+---
+
+## D22 — `mosquitto/passwd` se copia al build (`mosquitto/Dockerfile`), no bind-mount
+
+**Fecha:** 2026-09-02
+**Quien decidio:** Claude (implementacion de Fase 4 de la spec 003), confirmado contra el
+stack Docker real
+
+**Decision:** el servicio `broker` de `docker-compose.yml` pasa de `image: eclipse-mosquitto:2`
++ bind-mounts de `mosquitto.conf`/`passwd`/`acl.conf`, a `build: ./mosquitto` con un
+`mosquitto/Dockerfile` nuevo que copia esos 3 archivos a la imagen y ajusta permisos
+(`chmod 600` + `chown mosquitto:mosquitto` sobre `passwd`).
+
+**Por que:** `plan.md` (H7) proponia bind-mount, igual que `mosquitto.conf` ya vivia antes de
+esta spec. Probado en vivo, el bind-mount de `passwd` desde esta terminal (Windows + Docker
+Desktop) siempre expone el archivo dentro del contenedor como `-rw------- root:root` sin
+importar el `chmod` que se haga del lado Windows (probado con 600 y 644, mismo resultado) —
+el proceso mosquitto corre como usuario no-root `mosquitto` y no puede abrir un archivo 600
+de otro dueño, asi que el broker moria en el arranque (`Unable to open pwfile`). Copiar el
+archivo en el build permite fijar dueño/permiso de forma reproducible con `RUN chown/chmod`,
+sin depender de como Docker Desktop traduce permisos POSIX sobre un bind-mount de Windows.
+
+**Alcance:** `mosquitto/passwd` sigue gitignoreado (D20/T019) — quien clone el repo y corra
+`docker compose up --build` sin haberlo generado antes con `mosquitto_passwd` va a fallar el
+build (`COPY` de un archivo que no existe). Documentado en `quickstart.md`/`README.md`. Un
+cambio a `mosquitto/passwd` o `acl.conf` ahora requiere `docker compose up -d --build broker`
+(no alcanza con solo reiniciar el contenedor), mismo patron de riesgo ya conocido para
+`servicio` (`memory/risks.md`).

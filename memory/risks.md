@@ -266,3 +266,48 @@ tiene datos, limpiar (o migrar) los puntos viejos ahi tambien, no solo en SQLite
 tipo de paso de migracion, en dos lugares distintos que hay que recordar por separado. Revisar
 tambien la maquina `joelo` por las dudas (correr la misma query de deteccion: filtrar
 `diagnosticos` por rango amplio y ver si aparecen mas de un set de campos).
+
+---
+
+## El bind-mount de `mosquitto/passwd` no preserva permisos en Windows/Docker Desktop
+
+**Area que protege:** cualquier archivo de config de un contenedor que corre como usuario
+no-root y exige un permiso restrictivo (ej. `passwd` de mosquitto, que mosquitto rechaza
+abrir si no es legible por su propio usuario).
+
+**Detalle (D22, 2026-09-02):** bind-montear `mosquitto/passwd` desde el host (esta terminal,
+Windows + Docker Desktop) siempre lo expone dentro del contenedor como `-rw------- root:root`
+sin importar el `chmod` hecho del lado Windows (probado 600 y 644, mismo resultado) — el
+proceso `mosquitto` corre como usuario no-root y no puede leer un archivo 600 de otro dueño,
+asi que el broker moria en el arranque (`Unable to open pwfile`). Fix: `mosquitto/Dockerfile`
+nuevo que copia el archivo al build y fija dueño/permiso con `RUN chown/chmod` — reproducible
+sin depender de como Docker Desktop traduce permisos POSIX sobre un bind-mount de Windows.
+
+**No romper:** el broker (`docker-compose.yml`, servicio `broker`) ahora es `build: ./mosquitto`,
+no `image: eclipse-mosquitto:2` con bind-mounts. Un cambio a `mosquitto/passwd` o
+`mosquitto/acl.conf` requiere `docker compose up -d --build broker` — reiniciar el contenedor
+solo no alcanza (mismo patron de riesgo ya conocido para `servicio`, ver seccion de
+`docker compose up -d` sin `--build`). `mosquitto/passwd` sigue fuera de git (`.gitignore`) —
+un clone nuevo del repo necesita generarlo antes del primer build o el `COPY` del Dockerfile
+falla (instrucciones en `README.md`).
+
+---
+
+## Cliente MQTT desconocido en la LAN quedo rechazandose en loop tras activar autenticacion
+
+**Area que protege:** cualquier herramienta/proceso que hable con el broker Mosquitto fuera
+de este repo (dashboards de terceros, scripts sueltos, apps de inspeccion MQTT).
+
+**Detalle (2026-09-02, validando T026):** al activar `allow_anonymous false` (D20/FR-009), un
+cliente MQTT identificado como `37` (no es un client-id de `paho`, que usa `auto-XXXX`) desde
+la IP del host (`172.18.0.1`) quedo reconectando y siendo rechazado ("not authorised") varias
+veces por segundo durante toda la sesion de validacion. No es el emulador ni el servicio (ya
+actualizados con credenciales) — es una herramienta ajena a este repo corriendo en la maquina
+o la LAN de Joelo (sospecha: una app de inspeccion MQTT tipo MQTT Explorer/MQTTX con una
+conexion guardada y auto-reconexion).
+
+**No romper / accion pendiente:** identificar que herramienta es (revisar apps con conexiones
+MQTT guardadas apuntando a `localhost:1883` o a la IP de esta PC) y actualizarle usuario/password
+nuevos (ver `.env`, `MQTT_USERNAME`/`MQTT_PASSWORD`) o cerrarla si ya no hace falta. No es un
+bug del servicio — es la seguridad nueva funcionando como se espera, pero genera ruido
+constante en los logs del broker si se deja así.

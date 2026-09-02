@@ -35,7 +35,10 @@ COOLDOWN_MINUTOS = int(os.environ.get("COOLDOWN_MINUTOS", "15"))
 MQTT_HOST = os.environ.get("MQTT_HOST", "localhost")
 MQTT_PORT = int(os.environ.get("MQTT_PORT", "1883"))
 MQTT_TOPIC_BASE = os.environ.get("MQTT_TOPIC_BASE", "demo/planta1/linea_a/motor_001")
+MQTT_USERNAME = os.environ.get("MQTT_USERNAME", "")
+MQTT_PASSWORD = os.environ.get("MQTT_PASSWORD", "")
 
 SQLITE_DB_PATH = os.environ.get("SQLITE_DB_PATH", str(_RAIZ / "data" / "aiproject.db"))
 
 HTTP_PORT = int(os.environ.get("HTTP_PORT", "8000"))
+API_TOKEN = os.environ.get("API_TOKEN", "")
