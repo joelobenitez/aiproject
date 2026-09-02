@@ -87,10 +87,13 @@ equipo.
 
 ## Git
 
-Local y remoto sincronizados en `548de51` (terminal `jbenitez`). La terminal `joelo` necesita
-`git pull` para traer toda la sesion del 2026-09-02: `2db7cf7` (D18, simulador Modbus RTU),
-`7c76e47` (fix de terminologia, riesgo de migracion InfluxDB), `c3e43e2` (auditoria de stores
-+ spec 003 / D19), `b264077` (D20 + plan.md), `548de51` (tasks.md).
+Local en `49c2eee` (terminal `jbenitez`), pendiente de push. La terminal `joelo` necesita
+`git pull` para traer toda la sesion del 2026-09-02, incluida la de hoy: `2db7cf7` (D18,
+simulador Modbus RTU), `7c76e47` (fix de terminologia, riesgo de migracion InfluxDB),
+`c3e43e2` (auditoria de stores + spec 003 / D19), `b264077` (D20 + plan.md), `548de51`
+(tasks.md), `fa950e7` (cierre de sesion), `49c2eee` (Fase 1 de la spec 003 + D21 — **ojo**:
+esta trae el cambio de entrypoint a `python -m src`, la terminal `joelo` tiene que actualizar
+cualquier script/alias local que todavia invoque `python src/main.py` directo).
 
 ---
 
