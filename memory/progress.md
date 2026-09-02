@@ -9,13 +9,11 @@
 > (2026-09-02) conecto el RUT956 real por primera vez, publicando al Mosquitto local del
 > proyecto. **D19** (2026-09-02) abrio la spec `003-robustez-seguridad` a partir de una
 > auditoria real del codigo (7 hallazgos, ver `investigacion/handoff_spec_003_robustez.md`);
-> **D20** resolvio las 9 `NEEDS CLARIFICATION` de esa spec. Ciclo SDD completo hasta
-> `tasks.md` (37 tareas, 6 historias). **Fase 1 implementada y validada** (T001-T007, H1+H2:
-> cola/worker no bloqueante, ingesta resiliente a excepciones) — 41/41 tests en verde.
-> **D21** (2026-09-02, durante esta implementacion) encontro y arreglo un bug real preexistente:
-> el servicio ahora arranca con `python -m src` (nunca `python src/main.py` directo), porque
-> ese modo duplicaba la instancia del modulo `main.py` y dejaba `ultima_lectura_en` de
-> `/health` en `null` para siempre. Faltan Fases 2-5 + Polish de la spec 003.
+> **D20** resolvio las 9 `NEEDS CLARIFICATION` de esa spec. **Las 6 historias de usuario de la
+> spec 003 estan implementadas y validadas end-to-end contra el stack Docker real** (T001-T037,
+> salvo T024/T025 — manuales, pendientes). 49/49 tests en verde. **D21** (entrypoint,
+> `python -m src`) y **D22** (mosquitto/passwd al build) son dos bugs reales preexistentes
+> encontrados y arreglados durante la implementacion — detalle en `memory/decisions.md`.
 >
 > Historial completo de sesiones anteriores (implementacion del MVP, bugs encontrados y
 > arreglados, feature 002, D13-D18) decantado en `memory/historico.md` en el barrido de stores
@@ -23,7 +21,7 @@
 
 ---
 
-## Foco actual: spec 003 (robustez + seguridad del servicio) — Fase 1 completa, siguen 2-5
+## Foco actual: spec 003 (robustez + seguridad del servicio) — implementada, quedan 2 tareas manuales
 
 `specs/003-robustez-seguridad/` completa: `spec.md` (D19/D20, sin `NEEDS CLARIFICATION`),
 `plan.md` (diseno tecnico por hallazgo), `data-model.md`, `quickstart.md` (6 escenarios) y
@@ -132,17 +130,21 @@ T025). Comandos `/speckit-*` no instalados en esta terminal — seguir usando
   concurrentes sobre una alerta sin diagnostico devolvieron el mismo contenido exacto
   (`cacheado: false` + `cacheado: true`) — una sola llamada real a Claude.
 
-**Con esto, las 6 historias de usuario de la spec 003 estan implementadas.** Solo queda la
-Fase Final (Polish, T032-T037): correr la suite completa una vez mas, confirmar por lectura
-de codigo que los contratos no cambiaron (FR-014), documentar en `README.md` las variables de
-entorno nuevas y el cambio de puertos, registrar en `memory/risks.md` los hallazgos de esta
-implementacion que no estaban anticipados en `plan.md` (ya varios documentados: D21, D22, el
-cliente MQTT huerfano), validar `quickstart.md` completo de punta a punta, y confirmar que
-`data/aiproject.db` se recreo limpiamente con `detector_estado` (avisar a la terminal
-`joelo`, que va a necesitar el mismo paso).
+**Polish (T032-T037) completo 2026-09-02:** 49/49 tests en verde; contratos confirmados sin
+cambios por lectura de codigo (FR-014: topico MQTT, ruta del endpoint, nombres de
+tabla/measurement, formato de Telegram); `README.md` documenta las variables nuevas y los
+puertos; `memory/risks.md` tiene los hallazgos de la implementacion (D21, D22, el cliente MQTT
+huerfano, el problema de `MSYS_NO_PATHCONV` con `docker run -v` en Git Bash); los 6 escenarios
+de `quickstart.md` validados en vivo durante cada fase. **Mejor de lo previsto en D20/FR-016:**
+`data/aiproject.db` de esta terminal NO necesito borrarse — `inicializar_schema()` sumo
+`detector_estado` a la DB existente sin tocar alertas/diagnosticos previos (`CREATE TABLE IF
+NOT EXISTS` es genuinamente incremental). La terminal `joelo` tampoco va a necesitar borrar su
+DB: alcanza con `git pull` + `docker compose up -d --build`.
 
-**Proximo paso de codigo:** Fase Final / Polish (T032-T037) — cierre de calidad, sin logica
-nueva.
+**Spec 003 completa** (37/37 tareas de codigo/validacion; T024/T025 siguen manuales y
+pendientes — ver abajo). **Proximo paso:** ninguno de codigo pendiente en esta spec; el
+proximo trabajo depende de que Joelo indique un nuevo foco (ver "Pendientes sueltos" y el foco
+secundario del RUT956 mas abajo).
 
 ---
 

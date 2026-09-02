@@ -27,9 +27,16 @@ Ver `.env.example` para la lista completa. Resumen:
 | `INFLUX_URL` / `INFLUX_TOKEN` / `INFLUX_ORG` / `INFLUX_BUCKET` | series de tiempo (lecturas del motor) |
 | `COOLDOWN_MINUTOS` | ventana anti-duplicados de alertas (default 15, `research.md`) |
 | `MQTT_HOST` / `MQTT_PORT` / `MQTT_TOPIC_BASE` | broker y topico base (`contracts/mqtt-topico.md`) |
+| `MQTT_USERNAME` / `MQTT_PASSWORD` | credencial del broker (D20/FR-009, spec 003) — sin esto el `servicio`/emulador no se conectan, el broker no acepta anonimos |
+| `API_TOKEN` | header `X-API-Token` que debe presentar un cliente HTTP para `POST /diagnosticar/<id>` (D20/FR-010, spec 003) — sin configurar, el endpoint rechaza todo (fail-closed) |
+| `GRAFANA_ADMIN_PASSWORD` | password de administrador de Grafana (D20/FR-012, spec 003) — sin default inseguro: si falta, Grafana no arranca sano |
 
 `.env` esta en `.gitignore` — es la solucion de desarrollo (D8), no la decision de gestion de
 secretos de produccion (pendiente, ver `memory/risks.md`).
+
+**Puertos publicados al host** (D20/FR-011, spec 003): `8000` (API) y `8086` (InfluxDB) solo
+bindean `127.0.0.1` — no hacen falta desde la LAN. `1883` (MQTT, lo usa el RUT956) y `3000`
+(Grafana) siguen expuestos a la LAN.
 
 ## Levantar el stack
 
@@ -37,7 +44,9 @@ El broker MQTT requiere credenciales (D20/FR-009) — generar `mosquitto/passwd`
 del primer build (el archivo esta en `.gitignore`, no viaja con el repo, D22):
 
 ```bash
-docker run --rm -v "$(pwd)/mosquitto:/mosquitto/config" eclipse-mosquitto:2 \
+# MSYS_NO_PATHCONV=1 hace falta en Git Bash (Windows) — sin eso reescribe el path del
+# contenedor como si fuera un path de Windows (memory/risks.md)
+MSYS_NO_PATHCONV=1 docker run --rm -v "$(pwd)/mosquitto:/mosquitto/config" eclipse-mosquitto:2 \
   mosquitto_passwd -b -c /mosquitto/config/passwd <usuario> <password>
 ```
 

@@ -4,7 +4,9 @@
 
 **Created**: 2026-09-02
 
-**Status**: Clarificado (sin `NEEDS CLARIFICATION` pendientes, ver D20) — listo para `plan.md`
+**Status**: Implementado (T001-T037 completas salvo T024/T025, manuales y pendientes —
+rotar `ANTHROPIC_API_KEY` y cargar credenciales MQTT nuevas en el RUT956; ver `tasks.md` y
+`memory/progress.md`), 2026-09-02
 
 **Input**: User description: "Robustez y seguridad del servicio de deteccion: ingesta que no
 muere en silencio, pipeline no bloqueante, deteccion con banda muerta, cooldown persistente,

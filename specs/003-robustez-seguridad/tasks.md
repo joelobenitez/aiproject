@@ -248,22 +248,36 @@ la Fase 1 (T003), pero no de Historia 3/4/5.
 
 **Proposito**: cierre de calidad que cruza las 6 historias.
 
-- [ ] T032 Correr la suite completa (`pytest`), confirmar 39/39 previos + todos los tests
-      nuevos de T001, T002, T008, T012, T013, T027, T028 en verde (SC-007).
-- [ ] T033 Confirmar por lectura de codigo (FR-014) que el contrato de topico MQTT (5
+- [x] T032 Correr la suite completa (`pytest`), confirmar 39/39 previos + todos los tests
+      nuevos de T001, T002, T008, T012, T013, T027, T028 en verde (SC-007). — 49/49 en verde
+      (39 previos + 10 nuevos: 2 de T001/T002, 4 de T008/T012/T013 extra en `test_detector.py`,
+      2 de T027/T028, 2 de escenarios ya contados en el piso).
+- [x] T033 Confirmar por lectura de codigo (FR-014) que el contrato de topico MQTT (5
       partes, payload `{valor, unidad, timestamp}`), la ruta `POST /diagnosticar/<alerta_id>`
       y los nombres `diagnostico`/`diagnosticos` no cambiaron — solo se agrego el header de
-      autenticacion.
-- [ ] T034 Documentar en `README.md` las variables de entorno nuevas (`MQTT_USERNAME`,
+      autenticacion. — confirmado: `normalizador.py` sin tocar en toda la spec (`partes != 5`,
+      `_UNIDADES_VALIDAS` intactos); `_RUTA_DIAGNOSTICAR` misma regex; tabla SQLite
+      `diagnostico` y `Point("diagnosticos")` de InfluxDB sin cambios de nombre (solo UPSERT
+      internamente); `telegram.py` sin tocar (sus tests de contrato siguen en verde).
+- [x] T034 Documentar en `README.md` las variables de entorno nuevas (`MQTT_USERNAME`,
       `MQTT_PASSWORD`, `API_TOKEN`) y el cambio de puertos publicados al host.
-- [ ] T035 Registrar en `memory/risks.md` cualquier hallazgo nuevo del proceso de
+- [x] T035 Registrar en `memory/risks.md` cualquier hallazgo nuevo del proceso de
       implementacion que no estuviera anticipado en `plan.md` (ej. detalles especificos de
-      `mosquitto_passwd` en el entorno Windows de esta terminal).
-- [ ] T036 Validar `quickstart.md` completo de punta a punta, incluido el escenario
-      "Regresion — contratos que no cambian".
-- [ ] T037 Confirmar que `data/aiproject.db` se borro y se recreo limpiamente con la tabla
+      `mosquitto_passwd` en el entorno Windows de esta terminal). — D21, D22, el cliente MQTT
+      huerfano, y el problema de `MSYS_NO_PATHCONV` con `docker run -v` en Git Bash, todos
+      documentados durante la implementacion.
+- [x] T036 Validar `quickstart.md` completo de punta a punta, incluido el escenario
+      "Regresion — contratos que no cambian". — los 6 escenarios se validaron en vivo durante
+      cada fase (ver notas en T007, T011, T017, T026, T031); Regresion confirmada por T033 +
+      suite en verde.
+- [x] T037 Confirmar que `data/aiproject.db` se borro y se recreo limpiamente con la tabla
       `detector_estado` nueva (FR-016) — en esta terminal y, si aplica, avisar que la
-      terminal `joelo` va a necesitar el mismo paso al traer estos cambios.
+      terminal `joelo` va a necesitar el mismo paso al traer estos cambios. — mejor de lo
+      previsto: `inicializar_schema()` es `CREATE TABLE IF NOT EXISTS`, asi que la tabla nueva
+      se sumo a `data/aiproject.db` de esta terminal SIN borrar nada (confirmado:
+      `sqlite_master` lista `detector_estado` junto a las tablas existentes, con las alertas y
+      diagnosticos previos intactos). No hace falta que `joelo` borre su DB tampoco — alcanza
+      con `git pull` + `docker compose up -d --build`.
 
 ---
 

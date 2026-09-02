@@ -9,6 +9,8 @@ codigo de esta spec ya implementado (`tasks.md`).
 
 - Docker Desktop corriendo, Mosquitto nativo de Windows detenido si se corre el emulador
   contra `localhost:1883` (`memory/risks.md`).
+- `mosquitto/passwd` generado (`README.md` — gitignoreado, D20/D22; el `broker` ahora es
+  `build: ./mosquitto`, no una imagen con bind-mounts, ver D22).
 - `.env` con las credenciales nuevas: `MQTT_USERNAME`/`MQTT_PASSWORD`, `API_TOKEN`,
   `GRAFANA_ADMIN_PASSWORD` (ya no tiene default inseguro — el stack no arranca sano sin
   setearla).

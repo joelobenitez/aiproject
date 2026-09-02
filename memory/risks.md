@@ -311,3 +311,28 @@ MQTT guardadas apuntando a `localhost:1883` o a la IP de esta PC) y actualizarle
 nuevos (ver `.env`, `MQTT_USERNAME`/`MQTT_PASSWORD`) o cerrarla si ya no hace falta. No es un
 bug del servicio — es la seguridad nueva funcionando como se espera, pero genera ruido
 constante en los logs del broker si se deja así.
+
+---
+
+## `docker run -v` con rutas Unix en Git Bash (Windows) necesita `MSYS_NO_PATHCONV=1`
+
+**Area que protege:** cualquier comando `docker run`/`docker exec` corrido desde esta
+terminal (Git Bash en Windows) que use un bind-mount con ruta estilo Unix (`-v
+"$(pwd)/carpeta:/ruta/en/el/contenedor"`).
+
+**Detalle (2026-09-02, generando `mosquitto/passwd` para T019):** Git Bash reescribe
+automaticamente argumentos que parecen paths Unix (`/mosquitto/config`) a paths de Windows
+antes de pasarlos al proceso — rompe la mitad `:/mosquitto/config` de un `-v` de Docker,
+que termina buscando `C:/Users/.../mosquitto/config` en vez del path DENTRO del contenedor.
+Sintoma: `Error: Unable to open file .../mosquitto/config/passwd for writing. No such file or
+directory` (el path completo aparece mezclado, mitad host, mitad container).
+
+**Fix:** prefijar el comando con `MSYS_NO_PATHCONV=1` (deshabilita esa conversion para ese
+comando puntual):
+```bash
+MSYS_NO_PATHCONV=1 docker run --rm -v "$(pwd)/mosquitto:/mosquitto/config" eclipse-mosquitto:2 \
+  mosquitto_passwd -b -c /mosquitto/config/passwd <usuario> <password>
+```
+`docker compose` (usado para levantar el stack normalmente) NO tiene este problema — parsea
+los `volumes:` del YAML directamente, sin pasar por la reescritura de argumentos de Git Bash.
+Solo aplica a invocaciones sueltas de `docker run`/`docker exec` con `-v` desde esta terminal.
