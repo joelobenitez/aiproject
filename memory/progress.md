@@ -189,7 +189,8 @@ persistido + skew, H4 — **ojo**: movio `tests/integration/conftest.py` a `test
 `mosquitto/passwd` local antes del primer build, ver `README.md`; `.env` necesita
 `MQTT_USERNAME`/`MQTT_PASSWORD`/`API_TOKEN`/`GRAFANA_ADMIN_PASSWORD` nuevos, sin los cuales
 el stack no arranca sano), `25f065c` (progress.md), `1ec2bcf` (Fase 5 — reintento +
-concurrencia, H5+H6 — completa las 6 historias de la spec 003, falta solo Polish).
+concurrencia, H5+H6), `bb98260` (progress.md), `7d247b5` (Polish — cierra la spec 003
+completa, T001-T037 salvo T024/T025 manuales).
 
 ---
 
