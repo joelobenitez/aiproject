@@ -185,3 +185,68 @@ desde D9 es solo Mosquitto).
 Commits de la sesion: `2db7cf7` (RUT956/D18/simulador + memoria), `7c76e47` (fix de
 terminologia + riesgo de migracion InfluxDB). Cerrada — decantada de `memory/progress.md` en el
 barrido del mismo dia, salvo el pendiente real (adaptador RS485) que sigue vivo ahi.
+
+---
+
+## Sesion 2026-09-02 (terminal `jbenitez`) — Implementacion completa de la spec 003 (robustez y seguridad)
+
+Continuacion de la sesion anterior del mismo dia (auditoria + apertura de la spec 003, D19/D20
+ya cerrados/decantados). Esta sesion implemento las 37 tareas de codigo/validacion de
+`tasks.md` de punta a punta, fase por fase, validando cada una tanto con tests automatizados
+como en vivo contra el stack Docker real (nunca solo mocks) — subiendo la suite de 39 a 49
+tests en verde.
+
+**Fase 1 (H1+H2, ingesta resiliente y no bloqueante):** el callback MQTT pasa a normalizar y
+encolar unicamente; un worker en hilo aparte consume la cola y corre el pipeline completo bajo
+un `try/except` de ultimo recurso. `GET /health` suma `ultima_lectura_en`. Validado con
+`docker compose stop/start influxdb` en vivo.
+
+**Fase 2 (H3, banda muerta + confirmacion):** `Detector` exige 3 lecturas consecutivas antes
+de generar un evento nuevo (primera alerta o escalada — una escalada ya confirmada dispara
+inmediato, el contador no se resetea mientras el equipo siga fuera de NORMAL) y una banda
+muerta del 5% para volver a NORMAL. Se reescribio `tests/unit/test_detector.py` completo (los
+tests viejos asumian alerta inmediata de una lectura, comportamiento ya no vigente).
+
+**Fase 3 (H4, cooldown persistido + skew):** severidad/cooldown del detector se persisten en
+SQLite (`detector_estado`) y sobreviven a un reinicio de contenedor (validado con
+`docker compose restart servicio` en vivo); un timestamp desfasado >5min ya no silencia el
+equipo — se evalua igual usando el reloj del servidor.
+
+**Fase 4 (H7, seguridad):** broker Mosquitto autenticado (`allow_anonymous false` +
+password/ACL), `POST /diagnosticar` exige header `X-API-Token` (fail-closed, comparacion en
+tiempo constante), puertos `8000`/`8086` atados a `127.0.0.1`, Grafana sin password default.
+Validado en vivo: un cliente MQTT real y ajeno a la sesion (aparentemente una herramienta de
+inspeccion en la LAN de Joelo) quedo rechazandose en loop, confirmando que la autenticacion
+funciona — riesgo anotado para que Joelo la identifique y actualice.
+
+**Fase 5 (H5+H6, reintento + concurrencia):** `crear_diagnostico` paso a `UPSERT`; un
+diagnostico con `fallo=1` ya no bloquea el reintento. Un lock global serializa
+`diagnosticar_bajo_demanda` — dos pedidos concurrentes de la misma alerta generan una sola
+llamada real a Claude (validado en vivo con `curl ... &` x2).
+
+**Dos bugs reales preexistentes encontrados y arreglados en el camino (no anticipados en
+`plan.md`), ambos registrados como decisiones D21/D22:**
+- **D21:** correr `python src/main.py` directo duplicaba la instancia del modulo `main.py`
+  (una bajo `__main__`, otra bajo `src.main` via `api.py`) — cualquier estado en memoria
+  (como el `_detector` singleton o `ultima_lectura_en`) quedaba desincronizado del proceso
+  real. Fix: `src/__main__.py` nuevo, el servicio arranca con `python -m src`.
+- **D22:** el bind-mount de `mosquitto/passwd` desde Windows/Docker Desktop no preservaba el
+  permiso 600 que exige mosquitto — el broker moria al arrancar. Fix: `mosquitto/Dockerfile`
+  nuevo, el broker pasa de `image:` a `build: ./mosquitto`.
+
+Tambien se movio el fixture `entorno_aislado` de `tests/integration/conftest.py` a
+`tests/conftest.py` (raiz) para que `tests/unit/test_detector.py` pudiera compartirlo — de
+paso corrigio un problema de aislamiento preexistente (el `Detector`/`_detector` de
+`src/main.py` era, sin querer, un singleton compartido entre TODOS los tests de la sesion de
+pytest).
+
+**Hallazgo positivo:** `data/aiproject.db` no necesito borrarse pese a que D20/FR-016 lo
+aceptaba como valido — `inicializar_schema()` sumo la tabla `detector_estado` nueva a la DB
+existente sin tocar alertas/diagnosticos previos.
+
+Commits de la sesion: `49c2eee`..`2ce05bc` (11 commits: uno de codigo por fase + su
+actualizacion de `progress.md`, mas el commit final de Polish). Ver `memory/decisions.md`
+D21/D22 y `specs/003-robustez-seguridad/tasks.md` para el detalle completo tarea por tarea.
+Cerrada — decantada de `memory/progress.md` en este barrido; quedan vivos ahi solo los dos
+pendientes manuales genuinos (T024 rotar `ANTHROPIC_API_KEY`, T025 credenciales MQTT nuevas en
+el RUT956).

@@ -21,130 +21,26 @@
 
 ---
 
-## Foco actual: spec 003 (robustez + seguridad del servicio) — implementada, quedan 2 tareas manuales
+## Foco actual: spec 003 (robustez + seguridad del servicio) — completa, quedan 2 tareas manuales
 
-`specs/003-robustez-seguridad/` completa: `spec.md` (D19/D20, sin `NEEDS CLARIFICATION`),
-`plan.md` (diseno tecnico por hallazgo), `data-model.md`, `quickstart.md` (6 escenarios) y
-`tasks.md` (37 tareas en 6 historias — Fase 1 combina H1+H2 por acoplamiento real de
-`src/main.py`; Fase 5/US6 depende de esa misma base).
+`specs/003-robustez-seguridad/` (H1-H7 del handoff, D19/D20) esta **completa**: 37/37 tareas
+de codigo/validacion (`tasks.md`), las 6 historias de usuario implementadas y validadas tanto
+por tests (39->49 en verde) como en vivo contra el stack Docker real, fase por fase. Detalle
+completo (que toco cada fase, los 2 bugs reales encontrados en el camino D21/D22, y como se
+valido cada escenario de `quickstart.md`) decantado en `memory/historico.md`
+("Implementacion completa de la spec 003").
 
-**Fase 1 (T001-T007, H1+H2) implementada y validada 2026-09-02:**
-- `src/main.py`: el callback MQTT (`_al_recibir_mensaje`) solo normaliza y encola
-  (`queue.Queue(maxsize=1000)`); un hilo worker (`_worker_loop`, daemon) consume la cola y
-  corre todo el pipeline (`_procesar_lectura`), envuelto en `try/except Exception` de ultimo
-  recurso — una excepcion puntual (ej. InfluxDB caido) ya no mata el proceso ni bloquea las
-  lecturas siguientes.
-- `GET /health` (`src/api.py`) suma `ultima_lectura_en` (FR-002).
-- Backpressure: cola llena descarta el item mas viejo + warning.
-- Tests nuevos: `tests/integration/test_robustez_ingesta.py` (worker real + Queue real).
-  41/41 en verde (`tests/integration/_apoyo.py` ahora drena la cola en el mismo hilo para
-  mantener el determinismo de los tests de escenario A-D).
-- Validado en vivo contra el stack Docker real: `docker compose stop/start influxdb` +
-  emulador — el servicio sigue respondiendo `/health` durante la caida, retoma solo al
-  volver InfluxDB, `ultima_lectura_en` se actualiza correctamente.
-- **D21** (hallazgo real durante esta validacion, no anticipado en `plan.md`): el servicio
-  ahora arranca con `python -m src` (`Dockerfile`, `README.md`), nunca `python src/main.py`
-  directo — ese modo duplicaba la instancia del modulo y `ultima_lectura_en` quedaba en
-  `null` para siempre. Ver D21 en `memory/decisions.md` para el detalle tecnico completo.
+**Pendiente (manuales, no codigo, sin apuro pero bloquean al RUT956 real):**
+- **T024** — rotar `ANTHROPIC_API_KEY` en `console.anthropic.com` (pendiente desde el
+  2026-09-01) y actualizar `.env`.
+- **T025** — cargar las credenciales MQTT nuevas (usuario `aiproject`, ver `.env`) en la
+  config "Data to Server" del RUT956 (D18) — **el router real esta efectivamente
+  desconectado del broker** desde que se activo `allow_anonymous false` (D22/Fase 4).
 
-**Fase 2 (T008-T011, H3) implementada y validada 2026-09-02:**
-- `src/deteccion/detector.py`: `CONFIRMACION_LECTURAS = 3` y `BANDA_MUERTA = 0.05` (D20).
-  `Detector._estado` suma `lecturas_consecutivas` (se resetea a 0 cuando una lectura no
-  supera el umbral). Un evento nuevo (primera alerta O escalada) solo se genera al llegar a
-  3 lecturas consecutivas. La vuelta a NORMAL exige bajar de `valor_alerta * 0.95`, no solo
-  cruzar el umbral en sentido inverso.
-- Detalle de diseno no anticipado en `plan.md`: una escalada ALERTA->CRITICO dispara de
-  inmediato (sin esperar 3 lecturas CRITICO nuevas) porque el contador de confirmacion sigue
-  vivo mientras el equipo no vuelve a NORMAL — evita retrasar una escalada real y preserva el
-  comportamiento que ya validaba el test existente de escalada.
-- `tests/unit/test_detector.py` reescrito: los tests viejos asumian alerta inmediata de una
-  sola lectura (ya no es el comportamiento vigente) + tests nuevos de aislada/confirmada/
-  banda muerta. 45/45 en verde.
-- Validado con el emulador real: escenario D con 3 semillas distintas -> 0 alertas cada vez;
-  escenario A -> exactamente 1 alerta (severidad ALERTA).
-
-**Fase 3 (T012-T017, H4) implementada y validada 2026-09-02:**
-- `src/almacenamiento/sqlite_repo.py`: tabla `detector_estado` (PK equipo_id+variable) +
-  `cargar_estado_detector()` (tolera tabla inexistente, devuelve `{}`) /
-  `guardar_estado_detector(...)` (`INSERT OR REPLACE`).
-- `src/deteccion/detector.py`: `Detector.__init__` carga el estado persistido;
-  `_actualizar_estado()` graba solo cuando severidad/cooldown_hasta realmente cambian (no
-  por cada lectura). Validacion de skew (`SKEW_MAXIMO = 5 min`): timestamp desfasado no se
-  descarta, se reemplaza por el reloj del servidor (para cooldown Y para el resto de
-  `evaluar()`) y se loguea un warning.
-- **Hallazgo real no anticipado en `plan.md`:** `Detector()` ya no puede construirse a nivel
-  de modulo en `src/main.py` (import-time, antes de `inicializar_schema()`) porque ahora lee
-  SQLite en `__init__`. Se movio la construccion del `_detector` singleton a `main()`. Esto
-  exigio mover el fixture `entorno_aislado` de `tests/integration/conftest.py` a
-  `tests/conftest.py` (raiz) para que `tests/unit/test_detector.py` tambien pueda usarlo, y
-  de paso corrigio un problema de aislamiento de tests preexistente (`_detector` era un
-  singleton compartido entre TODOS los tests de la sesion de pytest, no solo dentro de un
-  archivo).
-- Validado en vivo: alerta real con escenario A, `docker compose restart servicio`,
-  `detector_estado` confirmado intacto (cooldown sin alterar); lectura con timestamp +3h
-  logueo el warning y calculo el cooldown con el reloj del servidor (verificado con match
-  exacto de segundos).
-- 47/47 tests en verde.
-
-**Fase 4 (T018-T023, T026, H7) implementada y validada 2026-09-02 — quedan solo T024/T025 (manuales):**
-- `src/config.py` + `.env.example`: `MQTT_USERNAME`/`MQTT_PASSWORD`, `API_TOKEN`,
-  `GRAFANA_ADMIN_PASSWORD` (sin fallback inseguro).
-- Broker: `allow_anonymous false` + `password_file` + `acl_file` (una unica credencial
-  compartida servicio+emulador, `readwrite` en el namespace del motor). `mqtt_client.py` y
-  `emulador_motor.py` llaman `username_pw_set(...)`.
-- **D22** (hallazgo real): `mosquitto/passwd` termino copiandose al build
-  (`mosquitto/Dockerfile` nuevo, `broker` pasa de `image:` a `build: ./mosquitto`) en vez de
-  bind-mount — Windows/Docker Desktop no preserva el permiso 600 que mosquitto exige, el
-  broker moria en el arranque (`Unable to open pwfile`). Ver riesgo nuevo en `memory/risks.md`.
-- `src/api.py`: `POST /diagnosticar` exige header `X-API-Token` (comparacion en tiempo
-  constante, fail-closed si `API_TOKEN` no esta configurado). `GET /health` sin cambios.
-- `docker-compose.yml`: `servicio`/`influxdb` bindeados a `127.0.0.1`; `1883`/`3000` siguen
-  en la LAN; Grafana sin password default.
-- Validado en vivo contra el stack real: broker rechazo un cliente MQTT ajeno sin
-  credenciales (ver riesgo nuevo — parece ser una herramienta de Joelo en la LAN, pendiente
-  identificar y actualizar); `POST /diagnosticar` sin/con-token-incorrecto -> 401, con token
-  correcto -> 200 (llamada real a Claude); puertos confirmados con `docker port`; Grafana
-  arranco sano con password nueva. 47/47 tests en verde (sin tests nuevos automatizados en
-  esta fase — es config/infra, validada por quickstart, mismo criterio que plan.md).
-
-**Pendiente antes de cerrar Fase 4 del todo (manuales, no codigo):** **T024** rotar
-`ANTHROPIC_API_KEY` en `console.anthropic.com` (pendiente desde el 2026-09-01) y **T025**
-actualizar la config "Data to Server" del RUT956 con las credenciales MQTT nuevas (D18) — sin
-esto el router deja de poder publicar en cuanto el broker deje de aceptar conexiones
-anonimas (ya las deja de aceptar, D22 — el RUT956 real esta efectivamente desconectado hasta
-T025). Comandos `/speckit-*` no instalados en esta terminal — seguir usando
-`.specify/scripts/powershell/*.ps1` + templates a mano (D19).
-
-**Fase 5 (T027-T031, H5+H6) implementada y validada 2026-09-02:**
-- `src/almacenamiento/sqlite_repo.py`: `crear_diagnostico` pasa de `INSERT` a
-  `INSERT ... ON CONFLICT(alerta_id) DO UPDATE SET ...` — un reintento sobrescribe la misma
-  fila en vez de violar el `UNIQUE(alerta_id)`.
-- `src/main.py`: `diagnosticar_bajo_demanda` solo trata como "cacheado" un registro con
-  `fallo=0`; todo el bloque (chequeo de cache + llamada a Claude + persistencia) esta
-  serializado por `_lock_diagnostico` (lock global unico, no por `alerta_id` — volumen bajo,
-  plan.md).
-- Tests nuevos en `tests/integration/test_diagnostico_bajo_demanda.py` (reintento + 2 hilos
-  concurrentes con `parser.diagnosticar` mockeado con delay). 49/49 en verde.
-- Validado en vivo contra el stack real: diagnostico fallido simulado + `POST /diagnosticar`
-  lo reintento sobrescribiendo la misma fila (llamada real a Claude); dos `POST /diagnosticar`
-  concurrentes sobre una alerta sin diagnostico devolvieron el mismo contenido exacto
-  (`cacheado: false` + `cacheado: true`) — una sola llamada real a Claude.
-
-**Polish (T032-T037) completo 2026-09-02:** 49/49 tests en verde; contratos confirmados sin
-cambios por lectura de codigo (FR-014: topico MQTT, ruta del endpoint, nombres de
-tabla/measurement, formato de Telegram); `README.md` documenta las variables nuevas y los
-puertos; `memory/risks.md` tiene los hallazgos de la implementacion (D21, D22, el cliente MQTT
-huerfano, el problema de `MSYS_NO_PATHCONV` con `docker run -v` en Git Bash); los 6 escenarios
-de `quickstart.md` validados en vivo durante cada fase. **Mejor de lo previsto en D20/FR-016:**
-`data/aiproject.db` de esta terminal NO necesito borrarse — `inicializar_schema()` sumo
-`detector_estado` a la DB existente sin tocar alertas/diagnosticos previos (`CREATE TABLE IF
-NOT EXISTS` es genuinamente incremental). La terminal `joelo` tampoco va a necesitar borrar su
-DB: alcanza con `git pull` + `docker compose up -d --build`.
-
-**Spec 003 completa** (37/37 tareas de codigo/validacion; T024/T025 siguen manuales y
-pendientes — ver abajo). **Proximo paso:** ninguno de codigo pendiente en esta spec; el
-proximo trabajo depende de que Joelo indique un nuevo foco (ver "Pendientes sueltos" y el foco
-secundario del RUT956 mas abajo).
+**Proximo paso:** ninguno de codigo pendiente en esta spec. El proximo trabajo depende de que
+Joelo indique un nuevo foco (ver "Pendientes sueltos" y el foco secundario del RUT956 abajo).
+Comandos `/speckit-*` no instalados en esta terminal — seguir usando
+`.specify/scripts/powershell/*.ps1` + templates a mano si se abre una spec nueva (D19).
 
 ---
 
@@ -175,22 +71,16 @@ equipo.
 
 ## Git
 
-Local en `99bc804` (terminal `jbenitez`), pendiente de push. La terminal `joelo` necesita
-`git pull` para traer toda la sesion del 2026-09-02: `2db7cf7` (D18, simulador Modbus RTU),
-`7c76e47` (fix de terminologia, riesgo de migracion InfluxDB), `c3e43e2` (auditoria de stores
-+ spec 003 / D19), `b264077` (D20 + plan.md), `548de51` (tasks.md), `fa950e7` (cierre de
-sesion), `49c2eee` (Fase 1 de la spec 003 + D21 — **ojo**: cambia el entrypoint a
-`python -m src`, actualizar cualquier script/alias local que todavia invoque
-`python src/main.py` directo), `0e4a628` (progress.md), `f8ee9a2` (Fase 2 — banda muerta +
-confirmacion por lecturas, H3), `b8f3f96` (progress.md), `c8cb424` (Fase 3 — cooldown
-persistido + skew, H4 — **ojo**: movio `tests/integration/conftest.py` a `tests/conftest.py`),
-`14e0b89` (progress.md), `99bc804` (Fase 4 — seguridad, H7 — **ojo**: `broker` de
-`docker-compose.yml` pasa de `image:` a `build: ./mosquitto`, D22; necesita generar
-`mosquitto/passwd` local antes del primer build, ver `README.md`; `.env` necesita
-`MQTT_USERNAME`/`MQTT_PASSWORD`/`API_TOKEN`/`GRAFANA_ADMIN_PASSWORD` nuevos, sin los cuales
-el stack no arranca sano), `25f065c` (progress.md), `1ec2bcf` (Fase 5 — reintento +
-concurrencia, H5+H6), `bb98260` (progress.md), `7d247b5` (Polish — cierra la spec 003
-completa, T001-T037 salvo T024/T025 manuales).
+Local y remoto sincronizados en `2ce05bc` (terminal `jbenitez`). La terminal `joelo` necesita
+`git pull` para traer toda la sesion del 2026-09-02 (RUT956/D18 + spec 003 completa, D19-D22)
+— detalle commit por commit en `memory/historico.md`. **Tres cambios que le van a pedir accion
+manual al traer el pull:**
+1. El servicio ahora arranca con `python -m src` (D21) — actualizar cualquier script/alias
+   local que invoque `python src/main.py` directo.
+2. El broker ahora es `build: ./mosquitto` (D22) — generar `mosquitto/passwd` local antes del
+   primer build (ver `README.md`).
+3. `.env` necesita `MQTT_USERNAME`/`MQTT_PASSWORD`/`API_TOKEN`/`GRAFANA_ADMIN_PASSWORD`
+   nuevos — sin ellos el stack no arranca sano.
 
 ---
 
