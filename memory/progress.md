@@ -16,20 +16,20 @@
 
 ---
 
-## Foco actual: spec 003 (robustez + seguridad del servicio) — Fase 0+1 completas
+## Foco actual: spec 003 (robustez + seguridad del servicio) — lista para implementar
 
-`specs/003-robustez-seguridad/` completa: `spec.md` (D19, sin `NEEDS CLARIFICATION`
-pendientes tras D20), `plan.md` (diseno tecnico concreto por hallazgo: cola+worker para H2,
-banda muerta 5%/3 lecturas para H3, tabla `detector_estado` para H4, UPSERT para H5, lock
-para H6, credenciales+puertos+password de Grafana para H7), `data-model.md` y `quickstart.md`
-(6 escenarios de validacion manual). Constitution Check: todo PASS.
+`specs/003-robustez-seguridad/` completa: `spec.md` (D19/D20, sin `NEEDS CLARIFICATION`),
+`plan.md` (diseno tecnico por hallazgo), `data-model.md`, `quickstart.md` (6 escenarios) y
+`tasks.md` (37 tareas en 6 historias — Fase 1 combina H1+H2 por acoplamiento real de
+`src/main.py`; Fase 5/US6 depende de esa misma base).
 
-**Proximo paso:** `tasks.md` (equivalente de `/speckit-tasks`) y despues implementacion.
-Ojo — la implementacion de H7 va a requerir accion manual fuera del codigo: generar
-credenciales nuevas de Mosquitto, actualizar la config "Data to Server" del RUT956 con esas
-credenciales (D18), y rotar `ANTHROPIC_API_KEY` en `console.anthropic.com`. Comandos
-`/speckit-*` no instalados en esta terminal — seguir usando
-`.specify/scripts/powershell/*.ps1` + templates a mano (ver D19, nota operativa).
+**Proximo paso:** implementacion, empezando por Fase 1 (T001-T007, el MVP minimo de esta
+spec: ingesta resiliente + no bloqueante). Ojo — Fase 4 (US5, seguridad) tiene 2 tareas
+manuales que no son codigo: **T024** rotar `ANTHROPIC_API_KEY` en `console.anthropic.com`
+(pendiente desde el 2026-09-01) y **T025** actualizar la config "Data to Server" del RUT956
+con las credenciales MQTT nuevas (D18) — sin esto el router deja de poder publicar en cuanto
+el broker deje de aceptar conexiones anonimas. Comandos `/speckit-*` no instalados en esta
+terminal — seguir usando `.specify/scripts/powershell/*.ps1` + templates a mano (D19).
 
 ---
 
