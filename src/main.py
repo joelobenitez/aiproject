@@ -8,9 +8,12 @@ POST /diagnosticar/<alerta_id> (servidor HTTP embebido, ver src/api.py).
 """
 import json
 import logging
+import queue
 import sys
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -20,11 +23,22 @@ from src.deteccion import umbrales  # noqa: E402
 from src.deteccion.detector import Detector  # noqa: E402
 from src.diagnostico import context, parser  # noqa: E402
 from src.ingesta import mqtt_client, normalizador  # noqa: E402
+from src.ingesta.normalizador import Lectura  # noqa: E402
 from src.notificacion import telegram  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
 _detector = Detector()
+
+# H2: el callback MQTT solo normaliza y encola; todo el procesamiento (Influx, deteccion,
+# diagnostico/notificacion) corre en `_worker_loop`, en un hilo aparte, para que una llamada
+# lenta a Claude nunca bloquee la recepcion de mensajes nuevos.
+_cola: "queue.Queue[Lectura]" = queue.Queue(maxsize=1000)
+
+# H1/FR-002: ultima vez que el worker proceso una lectura con exito, expuesta en GET /health.
+# Un solo escritor (el worker) la actualiza; la lectura desde el hilo HTTP es segura por la
+# atomicidad de la asignacion de referencias en Python (research.md).
+_ultima_lectura_en: Optional[str] = None
 
 
 def configurar_logging() -> None:
@@ -129,11 +143,9 @@ def _notificar_crudo(alerta_id: int, equipo_id: str, variable: str, valor: float
     telegram.enviar(mensaje)
 
 
-def _al_recibir_mensaje(topico: str, payload: bytes) -> None:
-    lectura = normalizador.normalizar(topico, payload)
-    if lectura is None:
-        return
-
+def _procesar_lectura(lectura: Lectura) -> None:
+    """Cuerpo del pipeline que antes corria en el callback MQTT (H2): ahora lo ejecuta
+    unicamente el worker, consumiendo la cola en orden."""
     influx_repo.escribir_lectura(lectura.equipo_id, lectura.variable, lectura.valor, lectura.unidad, lectura.timestamp)
 
     if lectura.variable == "horas_operacion":
@@ -158,10 +170,52 @@ def _al_recibir_mensaje(topico: str, payload: bytes) -> None:
     _procesar_evento(evento.equipo_id, evento.variable, evento.valor, lectura.unidad, evento.severidad, lectura.timestamp)
 
 
+def _worker_loop() -> None:
+    """H1: una excepcion al procesar una lectura puntual se loguea y se descarta, nunca
+    termina el worker. H2: es el unico consumidor de `_cola`, en un hilo separado del
+    callback MQTT."""
+    global _ultima_lectura_en
+    while True:
+        lectura = _cola.get()
+        try:
+            _procesar_lectura(lectura)
+            _ultima_lectura_en = datetime.now(timezone.utc).isoformat()
+        except Exception:
+            logger.exception(
+                "Error procesando lectura de %s/%s, se descarta y se sigue con la siguiente",
+                lectura.equipo_id,
+                lectura.variable,
+            )
+
+
+def obtener_ultima_lectura_en() -> Optional[str]:
+    return _ultima_lectura_en
+
+
+def _al_recibir_mensaje(topico: str, payload: bytes) -> None:
+    """Callback MQTT (H2): solo normaliza y encola, nunca hace I/O lento ni llama a Claude."""
+    lectura = normalizador.normalizar(topico, payload)
+    if lectura is None:
+        return
+
+    try:
+        _cola.put_nowait(lectura)
+    except queue.Full:
+        logger.warning("Cola de lecturas llena (%s items) — se descarta la mas vieja", _cola.qsize())
+        try:
+            _cola.get_nowait()
+        except queue.Empty:
+            pass
+        _cola.put_nowait(lectura)
+
+
 def main() -> None:
     configurar_logging()
     logger.info("Inicializando esquema SQLite en %s", config.SQLITE_DB_PATH)
     sqlite_repo.inicializar_schema()
+
+    hilo_worker = threading.Thread(target=_worker_loop, daemon=True)
+    hilo_worker.start()
 
     cliente = mqtt_client.crear_cliente(_al_recibir_mensaje)
     cliente.loop_start()
@@ -176,5 +230,7 @@ def main() -> None:
         cliente.loop_stop()
 
 
-if __name__ == "__main__":
-    main()
+# Sin `if __name__ == "__main__"` a proposito: ejecutar este archivo directo
+# (`python src/main.py`) crea una segunda instancia del modulo bajo el nombre `__main__`,
+# separada de `src.main` (la que importa `api.py`) — ver `src/__main__.py`. El servicio
+# arranca solo con `python -m src`.

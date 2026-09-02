@@ -25,3 +25,12 @@ def correr_escenario(generar, ticks: int = 40, segundos_por_tick: int = 1, semil
                 {"valor": round(valor, 2), "unidad": _UNIDADES[variable], "timestamp": timestamp}
             ).encode()
             servicio._al_recibir_mensaje(topico, payload)
+            _procesar_cola_sincrono()
+
+
+def _procesar_cola_sincrono() -> None:
+    """Estos tests no corren el worker en un hilo aparte (D19/tasks.md T003): procesan la cola
+    en el mismo hilo de test, en orden, para mantener el determinismo de las aserciones."""
+    while not servicio._cola.empty():
+        lectura = servicio._cola.get_nowait()
+        servicio._procesar_lectura(lectura)

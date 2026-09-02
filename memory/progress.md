@@ -10,7 +10,12 @@
 > proyecto. **D19** (2026-09-02) abrio la spec `003-robustez-seguridad` a partir de una
 > auditoria real del codigo (7 hallazgos, ver `investigacion/handoff_spec_003_robustez.md`);
 > **D20** resolvio las 9 `NEEDS CLARIFICATION` de esa spec. Ciclo SDD completo hasta
-> `tasks.md` (37 tareas, 6 historias) — falta la implementacion.
+> `tasks.md` (37 tareas, 6 historias). **Fase 1 implementada y validada** (T001-T007, H1+H2:
+> cola/worker no bloqueante, ingesta resiliente a excepciones) — 41/41 tests en verde.
+> **D21** (2026-09-02, durante esta implementacion) encontro y arreglo un bug real preexistente:
+> el servicio ahora arranca con `python -m src` (nunca `python src/main.py` directo), porque
+> ese modo duplicaba la instancia del modulo `main.py` y dejaba `ultima_lectura_en` de
+> `/health` en `null` para siempre. Faltan Fases 2-5 + Polish de la spec 003.
 >
 > Historial completo de sesiones anteriores (implementacion del MVP, bugs encontrados y
 > arreglados, feature 002, D13-D18) decantado en `memory/historico.md` en el barrido de stores
@@ -18,20 +23,40 @@
 
 ---
 
-## Foco actual: spec 003 (robustez + seguridad del servicio) — lista para implementar
+## Foco actual: spec 003 (robustez + seguridad del servicio) — Fase 1 completa, siguen 2-5
 
 `specs/003-robustez-seguridad/` completa: `spec.md` (D19/D20, sin `NEEDS CLARIFICATION`),
 `plan.md` (diseno tecnico por hallazgo), `data-model.md`, `quickstart.md` (6 escenarios) y
 `tasks.md` (37 tareas en 6 historias — Fase 1 combina H1+H2 por acoplamiento real de
 `src/main.py`; Fase 5/US6 depende de esa misma base).
 
-**Proximo paso:** implementacion, empezando por Fase 1 (T001-T007, el MVP minimo de esta
-spec: ingesta resiliente + no bloqueante). Ojo — Fase 4 (US5, seguridad) tiene 2 tareas
-manuales que no son codigo: **T024** rotar `ANTHROPIC_API_KEY` en `console.anthropic.com`
-(pendiente desde el 2026-09-01) y **T025** actualizar la config "Data to Server" del RUT956
-con las credenciales MQTT nuevas (D18) — sin esto el router deja de poder publicar en cuanto
-el broker deje de aceptar conexiones anonimas. Comandos `/speckit-*` no instalados en esta
-terminal — seguir usando `.specify/scripts/powershell/*.ps1` + templates a mano (D19).
+**Fase 1 (T001-T007, H1+H2) implementada y validada 2026-09-02:**
+- `src/main.py`: el callback MQTT (`_al_recibir_mensaje`) solo normaliza y encola
+  (`queue.Queue(maxsize=1000)`); un hilo worker (`_worker_loop`, daemon) consume la cola y
+  corre todo el pipeline (`_procesar_lectura`), envuelto en `try/except Exception` de ultimo
+  recurso — una excepcion puntual (ej. InfluxDB caido) ya no mata el proceso ni bloquea las
+  lecturas siguientes.
+- `GET /health` (`src/api.py`) suma `ultima_lectura_en` (FR-002).
+- Backpressure: cola llena descarta el item mas viejo + warning.
+- Tests nuevos: `tests/integration/test_robustez_ingesta.py` (worker real + Queue real).
+  41/41 en verde (`tests/integration/_apoyo.py` ahora drena la cola en el mismo hilo para
+  mantener el determinismo de los tests de escenario A-D).
+- Validado en vivo contra el stack Docker real: `docker compose stop/start influxdb` +
+  emulador — el servicio sigue respondiendo `/health` durante la caida, retoma solo al
+  volver InfluxDB, `ultima_lectura_en` se actualiza correctamente.
+- **D21** (hallazgo real durante esta validacion, no anticipado en `plan.md`): el servicio
+  ahora arranca con `python -m src` (`Dockerfile`, `README.md`), nunca `python src/main.py`
+  directo — ese modo duplicaba la instancia del modulo y `ultima_lectura_en` quedaba en
+  `null` para siempre. Ver D21 en `memory/decisions.md` para el detalle tecnico completo.
+
+**Proximo paso:** Fase 2 (Historia 3, T008-T011 — banda muerta + confirmacion por lecturas
+consecutivas en `src/deteccion/detector.py`), despues Fase 3 (Historia 4, cooldown
+persistido). Fase 4 (US5, seguridad) tiene 2 tareas manuales que no son codigo: **T024**
+rotar `ANTHROPIC_API_KEY` en `console.anthropic.com` (pendiente desde el 2026-09-01) y
+**T025** actualizar la config "Data to Server" del RUT956 con las credenciales MQTT nuevas
+(D18) — sin esto el router deja de poder publicar en cuanto el broker deje de aceptar
+conexiones anonimas. Comandos `/speckit-*` no instalados en esta terminal — seguir usando
+`.specify/scripts/powershell/*.ps1` + templates a mano (D19).
 
 ---
 

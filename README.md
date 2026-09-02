@@ -35,7 +35,7 @@ secretos de produccion (pendiente, ver `memory/risks.md`).
 
 ```bash
 docker compose up -d broker influxdb
-python src/main.py &
+python -m src &
 python herramientas/emulador_motor.py
 ```
 

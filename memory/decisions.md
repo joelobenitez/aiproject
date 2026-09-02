@@ -715,3 +715,34 @@ decisiones de producto y no solo de diseno):**
 
 **Alcance:** esta decision resuelve unicamente las `NEEDS CLARIFICATION` de la spec 003 para
 poder avanzar a `plan.md` — no reabre el alcance ya fijado por D19.
+
+---
+
+## D21 — El servicio arranca con `python -m src`, nunca `python src/main.py` directo
+
+**Fecha:** 2026-09-02
+**Quien decidio:** Claude (implementacion de Fase 1 de la spec 003), confirmado contra el
+stack Docker real
+
+**Decision:** `Dockerfile` (`CMD`) y `README.md` pasan de `python -u src/main.py` a
+`python -u -m src`, via un `src/__main__.py` nuevo (`from src.main import main; main()`). El
+`if __name__ == "__main__":` se saca de `src/main.py`.
+
+**Por que:** implementando T005 (FR-002, `ultima_lectura_en` en `GET /health`) se encontro
+que el campo quedaba `null` para siempre incluso con el pipeline funcionando y escribiendo en
+InfluxDB correctamente (verificado contra el stack Docker real, no un mock). Causa raiz:
+correr `python src/main.py` directo hace que ese archivo se ejecute como modulo `__main__`;
+cuando `main()` hace `from src import api` y `api.py` hace `from src import main as servicio`,
+Python importa el mismo archivo POR SEGUNDA VEZ bajo el nombre `src.main` — una instancia de
+modulo totalmente separada, con su propio `_detector`, `_cola` y `_ultima_lectura_en`
+(`None` para siempre, porque el worker real que los actualiza vive en la instancia
+`__main__`, no en `src.main`). Es un bug preexistente (invisible hasta ahora porque
+`diagnosticar_bajo_demanda`, lo unico que `api.py` llamaba de `servicio` hasta esta spec, solo
+toca SQLite/Claude — nunca leia estado en memoria de `main.py`). Con `python -m src`,
+`src/__main__.py` (un archivo trivial, sin logica propia) es el que corre como `__main__`, y
+`from src.main import main` importa `src.main` una unica vez — la misma instancia que despues
+reutiliza `api.py` al importarlo, porque Python cachea el modulo en `sys.modules` por nombre.
+
+**Alcance:** solo cambia como se invoca el proceso (`Dockerfile`, `README.md`); ningun
+contrato de datos ni de red cambia (FR-014). Se dejo un comentario en `src/main.py` y en
+`src/__main__.py` para que nadie reintroduzca el problema ejecutando el archivo directo.

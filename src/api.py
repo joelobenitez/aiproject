@@ -22,7 +22,7 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         if self.path == "/health":
-            self._responder(200, {"status": "ok"})
+            self._responder(200, {"status": "ok", "ultima_lectura_en": servicio.obtener_ultima_lectura_en()})
         else:
             self._responder(404, {"error": "no_encontrado"})
 

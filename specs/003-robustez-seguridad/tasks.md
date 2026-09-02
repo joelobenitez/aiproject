@@ -41,32 +41,36 @@ bloquea la recepcion de lecturas nuevas (H2).
 
 ### Tests para Historia 1 y 2
 
-- [ ] T001 [P] [US1] Test de integracion: con `influx_repo.escribir_lectura` mockeado para
+- [x] T001 [P] [US1] Test de integracion: con `influx_repo.escribir_lectura` mockeado para
       lanzar una excepcion, publicar una lectura y confirmar que el proceso sigue vivo y
       procesa la lectura siguiente sin reiniciar — `tests/integration/test_robustez_ingesta.py`
       (nuevo)
-- [ ] T002 [P] [US2] Test de integracion: con el nucleo de IA mockeado con un delay
+- [x] T002 [P] [US2] Test de integracion: con el nucleo de IA mockeado con un delay
       artificial, publicar lecturas de otra variable durante esa ventana y confirmar que
       quedan registradas y evaluadas sin esperar — mismo archivo que T001
 
 ### Implementacion de Historia 1 y 2
 
-- [ ] T003 [US1] [US2] Crear `queue.Queue(maxsize=1000)` y un hilo worker
+- [x] T003 [US1] [US2] Crear `queue.Queue(maxsize=1000)` y un hilo worker
       (`threading.Thread(daemon=True)`) en `src/main.py`; el callback MQTT
       (`_al_recibir_mensaje`) pasa a solo normalizar el payload y encolarlo — el resto de la
       logica que hoy tiene (escritura InfluxDB, deteccion, `_procesar_evento`) se mueve al
       loop del worker. Implementa H2.
-- [ ] T004 [US1] Envolver el cuerpo del worker en un `try/except Exception` de ultimo
+- [x] T004 [US1] Envolver el cuerpo del worker en un `try/except Exception` de ultimo
       recurso (`logger.exception(...)`, sin relanzar) — el worker nunca debe terminar por una
       excepcion de una lectura puntual. Implementa H1. (depende de T003)
-- [ ] T005 [US1] Variable compartida `ultima_lectura_en` (ISO 8601), actualizada por el
+- [x] T005 [US1] Variable compartida `ultima_lectura_en` (ISO 8601), actualizada por el
       worker despues de procesar cada lectura con exito; exponerla en `GET /health`
       (`src/api.py`) — FR-002. (depende de T003)
-- [ ] T006 [US2] Manejo de backpressure: si `queue.put_nowait` lanza `queue.Full`, descartar
+- [x] T006 [US2] Manejo de backpressure: si `queue.put_nowait` lanza `queue.Full`, descartar
       el item mas viejo (`get_nowait`) y loguear un warning antes de reintentar el `put` —
       Edge Case de `spec.md`. (depende de T003)
-- [ ] T007 [US1] [US2] Validar `quickstart.md` Escenarios 1 y 2 contra el stack real.
-      (depende de T004, T005, T006)
+- [x] T007 [US1] [US2] Validar `quickstart.md` Escenarios 1 y 2 contra el stack real.
+      (depende de T004, T005, T006) — Escenario 1 validado en vivo contra Docker real
+      (`docker compose stop/start influxdb` + emulador; ver hallazgo D21). Escenario 2
+      validado via el test de integracion T002 (Queue real + delay simulado, mismo patron que
+      ya usan los tests existentes, `plan.md`) — no se disparo una llamada real a Claude para
+      no gastar API en esta validacion.
 
 **Checkpoint**: ingesta resiliente y no bloqueante, demostrable independientemente del resto
 de las historias.

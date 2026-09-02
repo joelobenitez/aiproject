@@ -241,7 +241,9 @@ mas un ultimo mensaje `user` con el contexto real (JSON de `context.py` serializ
 
 ## 8. Orquestacion — como se conecta todo (`src/main.py`)
 
-Es el punto de entrada del proceso (`python -u src/main.py`). Al arrancar:
+Es el punto de entrada del proceso (`python -u -m src`, via `src/__main__.py` — nunca
+`python src/main.py` directo: eso crea una segunda instancia del modulo bajo `__main__`,
+separada de `src.main`, ver D21). Al arrancar:
 1. Configura logging (nivel INFO, formato con timestamp).
 2. Inicializa el esquema de SQLite (`sqlite_repo.inicializar_schema()`) — crea las tablas si
    no existen y siembra los umbrales/equipo por defecto (`INSERT OR IGNORE`, idempotente).
@@ -497,7 +499,7 @@ Cuatro servicios en una red bridge comun (`iot-net`):
    (`DOCKER_INFLUXDB_INIT_MODE=setup`) con org/bucket/token/admin desde variables de entorno.
    Puerto 8086 expuesto, volumen nombrado para persistencia.
 3. **`servicio`**: build local desde el `Dockerfile` del proyecto (copia `src/` +
-   `requirements.txt`, corre `python -u src/main.py`). Puerto 8000 expuesto (API D13).
+   `requirements.txt`, corre `python -u -m src`, D21). Puerto 8000 expuesto (API D13).
    Bind mount `./data:/app/data` — asi el archivo SQLite es accesible desde el host tambien.
 4. **`grafana`** (`grafana/grafana:11.3.0`): puerto 3000, provisioning montado como
    read-only (`./grafana/provisioning`), con el plugin `grafana-llm-app` (feature 002)
