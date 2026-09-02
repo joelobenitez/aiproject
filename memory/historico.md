@@ -55,3 +55,133 @@ archivo se jubilo a `obs/CHECKPOINT.md` junto con `obs/GEMINI.md` (overview temp
 fase de investigacion) y `obs/CLAUDE_pre-metodo.md` (version anterior del contrato). Su
 contenido vigente quedo distribuido en `memory/progress.md`, `memory/decisions.md` (D5) y
 esta seccion de historico.
+
+## Riesgos resueltos, decantados en el barrido de stores del 2026-09-02
+
+Tres riesgos que estaban marcados `[RESUELTO]` en `memory/risks.md` (o efectivamente resueltos
+sin marcar) se sacaron de ese store para no ocupar lugar en algo que se lee on-demand por
+riesgo activo:
+- **Duplicacion de carpeta Windows/WSL2** (abierta desde Session 05): resuelta por **D7**
+  (2026-08-29) — Windows/OneDrive quedo como fuente de verdad, `git init` + primer commit +
+  push a `github.com/joelobenitez/aiproject`. La copia WSL2 (`/home/joelo/aiproject`) quedo
+  obsoleta sin resincronizar (accion pendiente de Joelo, sin apuro, ver `progress.md`).
+- **`.claude/` sin excluir de git**: quedo anotado como riesgo pendiente en Session 05, pero
+  nunca se marco resuelto. Verificado en el barrido de 2026-09-02: `.gitignore` ya excluye
+  `.claude/` (primera linea del archivo) desde que se inicializo el repo (D7) — no hay ni
+  hubo filtracion.
+- **`constitution.md` de Spec Kit vacio**: resuelto el 2026-08-29 (`/speckit-constitution`
+  ratifico v1.0.0 con 5 principios basados en D1-D8). La enmienda que quedaba pendiente
+  (Principio I reconociendo la excepcion de fase MVP de D9) se cerro despues como **D12**
+  (2026-08-30, v1.1.0).
+
+## Sesion 2026-08-29 (tarde) — Implementacion del MVP completa (T001-T038)
+
+`/speckit-implement` corrido de punta a punta: 38/38 tareas de `tasks.md`. Codigo completo en
+`src/` (ingesta, deteccion, diagnostico, notificacion, almacenamiento, `main.py`),
+`herramientas/emulador_motor.py` (4 escenarios A-D), `docker-compose.yml`
+(broker+influxdb+servicio+grafana), provisioning de Grafana, 31 tests
+(contract+integration+unit). T037 valido el stack real end-to-end (Docker Desktop,
+`docker compose up -d --build`): MQTT -> deteccion -> SQLite -> InfluxDB -> Grafana, con un
+bloqueo resuelto en el camino (mosquitto nativo de Windows compitiendo por el puerto 1883, ver
+`memory/risks.md`). Commit y push a `github.com/joelobenitez/aiproject` como `2badaab`.
+Facturacion de la API de Claude aclarada: los $90.23 de credito en Claude.ai son una billetera
+distinta de `console.anthropic.com` (la que factura `ANTHROPIC_API_KEY`) — resuelto al dia
+siguiente cargando $5 reales. Cerrada — decantada de `memory/progress.md` en el barrido del
+2026-09-02.
+
+## Sesion 2026-08-30 — Validacion real end-to-end + 2 bugs reales arreglados
+
+Con $5 reales cargados en `console.anthropic.com`, se probo el nucleo de diagnostico contra la
+API real. **Bug real arreglado** en `src/diagnostico/parser.py` (linea ~62): Claude a veces
+envuelve la respuesta en fence de markdown (` ```json `) pese a pedirsele JSON puro — fix:
+detectar y sacar el fence antes de `json.loads()`. Commiteado `545b34a`. Con
+`TELEGRAM_BOT_TOKEN`/`CHAT_ID` reales, primera corrida 100% real del pipeline completo (MQTT
+-> deteccion -> Claude real -> Telegram real, Alerta #16). **Bug real arreglado** en las
+anotaciones de Grafana (`grafana/provisioning/dashboards/motor.json`): el query Flux devolvia
+`variable`/`severidad` como labels en vez de columnas — fix: agregar `|> group()` para forzar
+formato "long". Confirmado visualmente por Joelo (linea roja en el timestamp exacto de la
+Alerta #16). Ademas se cerraron los dos items que `/speckit-plan` habia dejado diferidos:
+`spec.md` reconciliado con el alcance real (Historia 3/email marcados diferidos por D9) y
+`/speckit-constitution` enmendado a v1.1.0 (**D12**). Metodo de memoria multisesion instalado
+(**D6**). Cerrada — decantada de `memory/progress.md` en el barrido del 2026-09-02.
+
+## Sesion 2026-08-31 — D13: diagnostico de IA bajo demanda
+
+Implementado y validado **D13** (ver `memory/decisions.md`): diagnostico automatico solo en
+CRITICO; servidor HTTP nuevo (`src/api.py`, puerto 8000) para pedirlo bajo demanda en ALERTA
+via `POST /diagnosticar/<alerta_id>`, con cache (no vuelve a llamar a Claude si ya existe).
+Validado con `ANTHROPIC_API_KEY` real (Alerta #4). 36/36 tests en verde. Commiteado y pusheado
+`103d3da`. Cerrada — decantada de `memory/progress.md` en el barrido del 2026-09-02.
+
+## Sesion 2026-09-01 — Organizacion documental + feature 002 completo (D14, D15, D16)
+
+- **D14**: jubilados los artefactos de `specs/001-diagnostico-motor-industrial/` a
+  `obs/specs/001-diagnostico-motor-industrial/` (ciclo SDD cerrado, 38/38 tareas). Spec Kit
+  (`.specify/`) sigue activo. Commiteado `b17ae3e`.
+- **D15/D16**: investigado e implementado el feature `002-grafana-llm-diagnostico` (plugin
+  `grafana-llm-app` + panel "Diagnostico IA" en Grafana que muestra el diagnostico que `src/`
+  ya genera via D13, sin llamados nuevos a Claude desde Grafana — evita duplicar el "un
+  cerebro" del Principio III). 13/13 tareas, incluido un bug real arreglado (el plugin v1.0.8
+  trae hardcodeado un modelo Anthropic descontinuado, pisado con `jsonData.models.mapping`).
+  39/39 tests en verde. Commiteado `a456901`. Jubilados los artefactos de
+  `specs/002-grafana-llm-diagnostico/` a `obs/` (D16), mismo criterio que D14. Commiteado
+  `b406366`. Confirmado con Joelo que no se agrega mas superficie de IA en Grafana ("no le
+  veo mucho uso al plugin").
+
+Cerrada — decantada de `memory/progress.md` en el barrido del 2026-09-02.
+
+## Sesion 2026-09-01 (terminal `joelo`) — 2 bugs de contenedores Docker viejos + D17
+
+Al arrancar la integracion del RUT956 (D11), Joelo no pudo acceder a `http://192.168.1.1` (sin
+diagnosticar la causa especifica, sesion cortada por tiempo). Aparte, dos bugs reales
+encontrados y arreglados, mismo patron: contenedores Docker creados antes de un cambio de
+codigo/config no se recreaban solos con `docker compose up -d` sin `--build`/
+`--force-recreate` (ver riesgo en `memory/risks.md`):
+- Grafana no arrancaba (plugin `grafana-llm-app` no registrado, contenedor de antes de D15).
+  Fix: `docker compose up -d grafana --force-recreate`.
+- El panel "Diagnostico IA" quedaba vacio (contenedor `servicio` con codigo de antes de
+  D13/feature 002). Fix: `docker compose up -d --build servicio`.
+
+**D17 (cambio de fondo, misma sesion):** el nucleo cognitivo dejo de diagnosticar (causa
+probable/razonamiento/urgencia/accion recomendada/confianza) y paso a devolver un resumen de
+hechos puramente factual (`resumen_ejecutivo` + `hechos_destacados`) — decision de Joelo por
+confianza/responsabilidad, no delegar juicio de causa/urgencia a la IA en un entorno industrial
+real. Tocó `prompt.py`, `parser.py`, `sqlite_repo.py` (schema), `influx_repo.py`, `main.py`,
+`telegram.py`, el panel de Grafana y 6 archivos de test. 39/39 tests en verde, validado en vivo
+(incluyo borrar y recrear `data/aiproject.db` porque `CREATE TABLE IF NOT EXISTS` no migra
+columnas). `CLAUDE.md` actualizado en las 2 menciones que describian el comportamiento viejo.
+Commiteado `8d72852`. El doc de estudio
+`investigacion/sistema_src_funcionamiento_detallado.md` se actualizo en paralelo para reflejar
+D17 (commiteado `fd06a4b`). Ver D17 en `memory/decisions.md` para el detalle completo. Cerrada
+— decantada de `memory/progress.md` en el barrido del 2026-09-02.
+
+## Sesion 2026-09-02 (terminal `jbenitez`) — Primer contacto con el RUT956 real + D18
+
+Bloqueador de la sesion anterior resuelto: acceso confirmado a `http://192.168.1.1`. Relevamiento
+de solo lectura encontro configuracion previa no documentada en el equipo: un Modbus TCP
+Client que se auto-consulta a si mismo (loopback, no sensor real) y un "Data to Server"
+publicando a un broker EMQX Cloud externo. Bibliografia oficial de Teltonika (RutOS Web API,
+JSON-RPC, Modbus, MQTT, SSH) investigada y guardada como referencia en la memoria del
+asistente (no en este repo).
+
+**D18:** el RUT956 se reconfiguro para publicar al Mosquitto local del proyecto en vez del
+cloud externo — validado de punta a punta con `mosquitto_sub`, sin bloqueo de firewall. Ver D18
+en `memory/decisions.md` (incluye el riesgo de que la IP del broker esta atada a esta PC
+especifica, ver `memory/risks.md`).
+
+Escrito `herramientas/simulador_modbus_rtu.py` (esclavo Modbus RTU simulado, listo para cuando
+llegue el adaptador USB-RS485 que Joelo todavia no tiene — el frente de hardware real sigue en
+pausa, ver `memory/progress.md`). Se fijo `pymodbus[serial]==3.7.4` en `requirements.txt` (la
+3.8+ rompe la API clasica, ver riesgo en `memory/risks.md`).
+
+**Bug real encontrado y arreglado:** el panel "Resumen de IA" de Grafana rompia (crash de
+frontend, a veces freeze del tab completo) porque el measurement `diagnosticos` en InfluxDB
+tenia datos pre-D17 mezclados con el schema nuevo — D17 solo habia migrado SQLite, no InfluxDB.
+Limpiados los puntos viejos en esta maquina (`influx delete`); registrado el riesgo para
+revisar tambien la terminal `joelo`. De paso se corrigio una referencia residual a
+"EMQX/Mosquitto" en `investigacion/sistema_src_funcionamiento_detallado.md` (el broker real
+desde D9 es solo Mosquitto).
+
+Commits de la sesion: `2db7cf7` (RUT956/D18/simulador + memoria), `7c76e47` (fix de
+terminologia + riesgo de migracion InfluxDB). Cerrada — decantada de `memory/progress.md` en el
+barrido del mismo dia, salvo el pendiente real (adaptador RS485) que sigue vivo ahi.

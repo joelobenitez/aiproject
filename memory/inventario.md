@@ -10,7 +10,7 @@ Mapa de artefactos: ubicacion, contenido en una linea, estado.
 |---|---|---|---|
 | Contrato del proyecto | `CLAUDE.md` | Reglas estables: contexto, hardware, arquitectura, entorno de desarrollo, indice de donde leer cada cosa | Validado (reescrito 2026-08-29 al adoptar el metodo) |
 | Estado vivo | `memory/progress.md` | Foto del presente + proximos pasos, se lee siempre al abrir sesion | Validado |
-| Decisiones | `memory/decisions.md` | D1-D6, numeradas, con el porque y alternativas descartadas | Validado |
+| Decisiones | `memory/decisions.md` | Numeradas (D1-D18 al 2026-09-02), con el porque y alternativas descartadas | Validado |
 | Riesgos | `memory/risks.md` | Precondiciones y "no romper" (carpeta duplicada, secretos, etc.) | Validado |
 | Inventario | `memory/inventario.md` | Este archivo | Validado |
 | Historico | `memory/historico.md` | Sesiones y hitos cerrados | Validado |
@@ -37,7 +37,8 @@ Mapa de artefactos: ubicacion, contenido en una linea, estado.
 | Constitution | `.specify/memory/constitution.md` | v1.1.0 — 5 principios, Principio I con excepcion de fase MVP (D12) | Usado para el feature 001 (cerrado). Queda activo, disponible para features futuras |
 | Templates | `.specify/templates/*.md` | spec-template, plan-template, tasks-template, checklist-template, constitution-template | Sin tocar (default de Spec Kit) |
 | Scripts | `.specify/scripts/powershell/*.ps1` | Scripts de soporte del workflow Spec Kit (PowerShell, acorde al entorno Windows) | Sin tocar (default de Spec Kit) |
-| Comandos | `.claude/skills/speckit-*/SKILL.md` | 9 comandos `/speckit-constitution`, `/speckit-specify`, `/speckit-clarify`, `/speckit-plan`, `/speckit-checklist`, `/speckit-tasks`, `/speckit-analyze`, `/speckit-implement`, `/speckit-converge`, `/speckit-taskstoissues` | Instalados Session 05. Usados para el loop completo del feature 001 (`/speckit-implement` corrido de punta a punta) |
+| Comandos | `.claude/skills/speckit-*/SKILL.md` | 9 comandos `/speckit-constitution`, `/speckit-specify`, `/speckit-clarify`, `/speckit-plan`, `/speckit-checklist`, `/speckit-tasks`, `/speckit-analyze`, `/speckit-implement`, `/speckit-converge`, `/speckit-taskstoissues` | Instalados Session 05. **No instalados en la terminal `jbenitez`** (`.claude/` no viaja con git) — rodeo usado: `.specify/scripts/powershell/*.ps1` (100% local) + templates a mano |
+| Feature 003 — spec | `specs/003-robustez-seguridad/spec.md` | Robustez + seguridad del servicio (H1-H7 de `investigacion/handoff_spec_003_robustez.md`), estado del detector persistido. Ver D19 | Draft — 9 `NEEDS CLARIFICATION` pendientes antes de `plan.md` |
 
 La herramienta (`.specify/` + comandos) queda activa e instalada — no se jubila. Los
 artefactos generados para el feature 001 (spec/plan/tasks/etc.) sí se jubilaron, ver
@@ -65,6 +66,6 @@ tabla "Jubilados (obs/)" (D14).
 
 | Artefacto | Ubicacion | Contenido | Estado |
 |---|---|---|---|
-| Repositorio git (Windows) | esta carpeta | — | **No existe todavia** — no se corrio `git init` aca (ver risks.md) |
-| Repositorio git (WSL2) | `/home/joelo/aiproject` | Repo con remote a `github.com/joelobenitez/aiproject` | Existe pero desactualizado y desincronizado de esta carpeta (ver risks.md) |
-| Docker Compose | — | Servicios EMQX, InfluxDB, MySQL, Node-RED, n8n, Grafana | No implementado todavia — solo tabla de referencia (imagen/puerto) en `definicion/arquitectura_sistema.md` |
+| Repositorio git | esta carpeta | Remote `origin` a `github.com/joelobenitez/aiproject` | Activo desde D7 (2026-08-29), decenas de commits, sincronizado entre terminales `jbenitez`/`joelo` via `git pull`/`push` |
+| Repositorio git (WSL2) | `/home/joelo/aiproject` | Copia vieja, previa a D7 | Obsoleta, sin resincronizar — pendiente de Joelo, sin apuro (ver D7 en `memory/decisions.md`) |
+| Docker Compose | `docker-compose.yml` | 4 servicios: `broker` (Mosquitto), `influxdb`, `servicio` (build local, `src/`), `grafana` (D9) | Implementado y en uso desde el MVP. Ver `memory/decisions.md` D9 y `investigacion/sistema_src_funcionamiento_detallado.md` seccion 15 para el detalle |

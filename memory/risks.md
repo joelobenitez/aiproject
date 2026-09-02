@@ -4,47 +4,6 @@ Precondiciones y "no romper". Consultar on-demand antes de tocar el area asociad
 
 ---
 
-## [RESUELTO 2026-08-29, ver D7] Duplicacion de carpeta de trabajo (Windows OneDrive vs WSL2)
-
-**Area que protege:** cualquier operacion de git (init, commit, push) y cualquier decision
-sobre "donde vive el codigo".
-
-**Detalle:** hay dos carpetas separadas y NO sincronizadas:
-- `C:\Users\joelo\OneDrive\Documentos\Claude\Projects\aiproject` (Windows) — tiene todo el
-  contenido actual (investigacion/, definicion/, memory/, Spec Kit) pero **no es un repo
-  git** todavia, nunca se conecto a GitHub.
-- `/home/joelo/aiproject` (WSL2) — **si es** un repo git con remote a
-  `github.com/joelobenitez/aiproject`, pero esta desactualizada (ultimo commit "cierre
-  sesion 02", estructura plana, sin `definicion/`, sin Spec Kit).
-
-**Chequeado en Session 05:** confirmado que son carpetas separadas. Se le pregunto a Joelo
-como resolverlo (copiar Windows -> WSL2 y pushear ahi / git init nuevo en Windows con
-force-push / no hacer nada todavia). Decision de esa sesion: "lo dejamos asi" — no se hizo
-push, no se toco git. **Sigue sin resolver al 2026-08-29.**
-
-**No romper:** no correr `git init` + push en ninguna de las dos carpetas sin retomar esta
-decision con Joelo primero — cualquiera de las dos opciones (Windows como fuente de verdad,
-o migrar a WSL2) puede pisar el historial del remote existente si se hace a las apuradas.
-
-**Resolucion (D7, 2026-08-29):** se eligio Windows (esta carpeta) como fuente de verdad.
-`git init` + primer commit ya hechos aca. Falta el `git push --force` a
-`github.com/joelobenitez/aiproject`, que Joelo corre desde su propia terminal (la VM puente
-de este bridge no tiene credenciales de GitHub). La copia WSL2 queda obsoleta sin
-resincronizar. Detalle: `memory/decisions.md` D7.
-
----
-
-## `.claude/` sin excluir de git
-
-**Area que protege:** el futuro `git init` en la carpeta de trabajo.
-
-**Detalle:** Spec Kit recomienda agregar `.claude/` a `.gitignore` por posibles
-credenciales/tokens de agentes guardados ahi. Todavia no existe `.gitignore` en el proyecto
-(la carpeta no es repo git aun), asi que esto queda pendiente para el momento en que se
-resuelva el riesgo anterior y se inicialice git.
-
----
-
 ## Flows de Node-RED como JSON sin disciplina de versionado (D1)
 
 **Area que protege:** la capa de datos (Node-RED) una vez que se empiece a implementar.
@@ -109,24 +68,6 @@ tiene permisos para hacerlo sola). Esta en modo Automatic, asi que vuelve a arra
 se reinicia Windows. Si se vuelve un problema recurrente, la alternativa sin tocar el
 servicio es remapear el puerto host del broker en `docker-compose.yml` (ej. `11883:1883`) y
 ajustar `MQTT_PORT` en `.env` para clientes que corren fuera de Docker.
-
----
-
-## [RESUELTO 2026-08-29] `constitution.md` de Spec Kit sigue siendo el template vacio
-
-**Area que protege:** cualquier uso de los comandos `/speckit-*` que dependan de la
-constitucion (por ejemplo `/speckit-plan`, `/speckit-analyze`).
-
-**Detalle:** instalado en Session 05, nunca completado. Correr `/speckit-specify` o
-`/speckit-plan` antes de llenar `constitution.md` puede generar artefactos sin las
-convenciones del proyecto (idioma sin tildes, separacion Node-RED=datos / n8n=orquestacion /
-Python=inteligencia, disciplina git) incorporadas.
-
-**Resolucion (2026-08-29):** `/speckit-constitution` corrido, `.specify/memory/constitution.md`
-ratificado en v1.0.0 con 5 principios basados en D1-D8. `/speckit-specify`, `/speckit-plan`,
-`/speckit-tasks` e `/speckit-implement` ya corrieron todos sobre esta constitucion. Queda
-pendiente (no bloqueante) una enmienda futura para que el Principio I reconozca la excepcion
-de fase MVP introducida por D9 — ver `memory/progress.md`.
 
 ---
 

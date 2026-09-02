@@ -592,3 +592,67 @@ broker que usa el resto del stack es ademas coherente con la arquitectura defini
   RTU/RS485 (D11).
 - El dato publicado hoy sigue siendo el auto-sondeo Modbus TCP del router sobre si mismo
   (ver `input1` en la config, definido antes de esta sesion) mas GPS — no es un sensor real.
+
+---
+
+## D19 — Alcance de la spec 003: robustez + seguridad del servicio, estado del detector persistido
+
+**Fecha:** 2026-09-02
+**Quien decidio:** Joelo
+
+**Decision:** el feature `003-robustez-seguridad` cubre los 7 hallazgos (H1-H7) de la
+auditoria de arquitectura documentada en `investigacion/handoff_spec_003_robustez.md`
+(verificada contra el codigo real de `src/`, commit `7c76e47`, incluido el comportamiento de
+`paho-mqtt` leido de la libreria instalada en `.venv/`, no de su documentacion): el hilo de
+ingesta que muere en silencio ante cualquier excepcion, el pipeline bloqueante dentro del
+callback MQTT, la deteccion sin banda muerta ni retardo de activacion, el cooldown del
+detector solo en RAM y atado al reloj del sensor, un resumen fallido que queda cacheado para
+siempre, una race condition en el endpoint bajo demanda, y una superficie de seguridad mas
+ancha de lo que `memory/risks.md` documentaba (broker anonimo sin TLS, endpoint sin auth
+bindeado a todas las interfaces, 4 puertos publicados al host, password default de Grafana,
+`ANTHROPIC_API_KEY` pendiente de rotar). Los 5 hallazgos menores (M1-M5) entran como Polish,
+no como historia de usuario propia. El estado del detector (severidad + cooldown por
+equipo+variable) **se persiste** — sobrevive a un reinicio del contenedor — y se valida el
+skew del reloj del sensor contra el reloj del servidor; esto no se difiere a un feature 004.
+
+**Por que:** los 7 hallazgos comparten el mismo patron de fondo ya visto varias veces en este
+proyecto (`memory/risks.md`): el sistema puede reportarse sano (`docker ps` en "Up", `/health`
+en `ok`) mientras dejo de hacer su trabajo real, sin ningun error visible. H4 en particular
+(cooldown en RAM) es agravado por D18: el RUT956 real puede no tener NTP configurado, y hoy el
+detector confia ciegamente en el timestamp del payload sin validar que tan lejos esta del
+reloj real.
+
+**Alcance — explicitamente fuera de esta spec:**
+- Separar detector y workers en procesos distintos (eso es D11, escala industrial; la 003 se
+  queda dentro del proceso unico de D9 — el mecanismo de H2 es una cola/worker interno al
+  mismo proceso).
+- Telegram Nivel 1+ (D2).
+- Integracion real del RUT956 por RS485 (en pausa por el adaptador USB-RS485).
+- Reemplazar SQLite por Postgres/MySQL.
+- Deteccion de anomalias por ML.
+- Gestion de secretos de produccion mas alla de `.env` local (sigue diferida desde D8) — esta
+  spec resuelve autenticacion de aplicacion (broker, endpoint), no gestion de secretos como
+  practica de infraestructura.
+
+**Contratos que esta spec NO rompe:** el topico MQTT de 5 partes y el payload
+`{valor, unidad, timestamp}` (D18 ya publica contra este broker); la ruta
+`POST /diagnosticar/<alerta_id>` (D13); los nombres de tabla/measurement
+`diagnostico`/`diagnosticos` (D17 decidio no renombrar el plumbing); el formato del mensaje de
+Telegram post-D17.
+
+**Quedan 9 preguntas abiertas** (banda muerta y retardo, ventana de skew, mecanismo de auth
+del endpoint, credenciales/TLS del broker, que puertos cerrar, politica de reintento del
+resumen fallido, alcance de secretos de produccion, estrategia de migracion del schema de
+SQLite, y confirmacion de que la cola interna entra en la excepcion de fase MVP del Principio
+I) — quedaron marcadas `NEEDS CLARIFICATION` en `specs/003-robustez-seguridad/spec.md` en vez
+de decidirse en esta entrada. Ver seccion 7 del handoff para el detalle completo de cada una.
+
+**Nota operativa:** esta decision se tomo en una sesion de auditoria que **no implemento
+nada** — el entregable de esa sesion fue `investigacion/handoff_spec_003_robustez.md`. El
+ciclo SDD (spec/plan/tasks/implement) se corre en una sesion posterior con la estructura de
+memoria del proyecto cargada. Los comandos `/speckit-*` no estan instalados en la terminal
+`jbenitez` (`.claude/` no viaja con git) — se uso el mismo rodeo que en el feature 002:
+`.specify/scripts/powershell/create-new-feature.ps1` (100% local) para scaffoldear
+`specs/003-robustez-seguridad/` desde `.specify/templates/spec-template.md`, escribiendo el
+contenido a mano. Se actualizo `.specify/feature.json`, que todavia apuntaba a
+`specs/002-grafana-llm-diagnostico` (jubilada por D16).
